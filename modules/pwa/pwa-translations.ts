@@ -1,0 +1,36 @@
+/** Chuỗi PWA (cài app), nhắc nhở push và "đang chơi" (en/vi), spread vào lib/i18n.tsx. */
+export const pwaEn = {
+  "presence.playing": "{count} playing now",
+  "pwa.cardTitle": "App & reminders",
+  "pwa.install": "Install game",
+  "pwa.iosHint": "On iPhone/iPad: tap Share, then “Add to Home Screen” to install the game.",
+  "push.title": "Reminders",
+  "push.description": "Get one reminder in the evening if you haven't played today's challenge, so you never lose your streak.",
+  "push.enable": "Turn on reminders",
+  "push.disable": "Turn off reminders",
+  "push.enabled": "Reminders are on.",
+  "push.disabled": "Reminders are off.",
+  "push.denied": "Notifications are blocked for this site. Allow them in your browser settings to get reminders.",
+  "push.needsInstall": "On iPhone/iPad, install the game to your home screen first to get reminders.",
+  "push.unsupported": "This browser can't show reminders.",
+  "push.failed": "Could not change reminders. Please try again.",
+  "push.streakPrompt": "Remind me to keep my streak",
+} as const
+
+export const pwaVi: Record<keyof typeof pwaEn, string> = {
+  "presence.playing": "{count} người đang chơi",
+  "pwa.cardTitle": "Ứng dụng & nhắc nhở",
+  "pwa.install": "Cài game",
+  "pwa.iosHint": "Trên iPhone/iPad: bấm Chia sẻ rồi chọn “Thêm vào MH chính” để cài game.",
+  "push.title": "Nhắc nhở",
+  "push.description": "Nhận 1 tin vào buổi tối nếu bạn chưa chơi thử thách hôm nay, để không bao giờ mất chuỗi.",
+  "push.enable": "Bật nhắc nhở",
+  "push.disable": "Tắt nhắc nhở",
+  "push.enabled": "Đã bật nhắc nhở.",
+  "push.disabled": "Đã tắt nhắc nhở.",
+  "push.denied": "Thông báo của trang đang bị chặn. Cho phép trong cài đặt trình duyệt để nhận nhắc nhở.",
+  "push.needsInstall": "Trên iPhone/iPad, cần cài game ra màn hình chính trước mới nhận được nhắc nhở.",
+  "push.unsupported": "Trình duyệt này không hiện được nhắc nhở.",
+  "push.failed": "Không đổi được nhắc nhở. Vui lòng thử lại.",
+  "push.streakPrompt": "Nhắc tôi giữ chuỗi",
+}

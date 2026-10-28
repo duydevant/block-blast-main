@@ -1,0 +1,5 @@
+export * from "./engine/game-types"
+export * from "./engine/board-grid-operations"
+export { findShape, SHAPE_CATALOG } from "./engine/piece-shape-catalog"
+export { createNewGame, gameReducer, hasAnyMove } from "./engine/game-state-reducer"
+export { SCORING_RULES } from "./engine/score-and-combo-rules"

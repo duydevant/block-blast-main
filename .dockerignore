@@ -1,0 +1,26 @@
+# Bí mật: env chỉ vào image qua build secret / env_file của compose, không bao giờ qua build context
+.env*
+*.pem
+*-firebase-adminsdk-*.json
+
+# Build/dependency output (cài và build lại trong image)
+node_modules
+.next
+out
+build
+coverage
+.npm-cache
+*.tsbuildinfo
+next-env.d.ts
+
+# Không cần để chạy app
+.git
+.claude
+.vercel
+.firebase
+plans
+docs
+*.log
+Dockerfile
+docker-compose.yml
+.dockerignore

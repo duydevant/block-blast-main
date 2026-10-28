@@ -1,0 +1,1 @@
+- [IP-clean rewrite of block-puzzle](project-ip-clean-rewrite.md) — third-party-derived code removal; block-blast-poki/ + logs tracked in git root

@@ -1,0 +1,41 @@
+# Deploy: cp .env.example .env → điền giá trị → docker compose up -d --build
+# Không có giá trị env nào ở đây: mọi biến đọc từ file env (mặc định `.env`, đổi bằng ENV_FILE).
+# Biến `${...}` bên dưới compose tự lấy từ file `.env` cạnh file này (hoặc `--env-file`).
+#   PORT       cổng app nghe trong container (mặc định 3000)
+#   HOST_PORT  cổng mở ra trên máy host (mặc định 3000)
+#   HOST_IP    IP host bind cổng (mặc định 0.0.0.0; đặt 127.0.0.1 khi đứng sau nginx/caddy)
+name: block-puzzle
+
+services:
+  web:
+    build:
+      context: .
+      secrets:
+        - app_env
+    image: ${IMAGE_NAME:-block-puzzle-web}:${IMAGE_TAG:-latest}
+    env_file:
+      - ${ENV_FILE:-.env}
+    # Cùng biến với cổng map bên dưới để app luôn nghe đúng cổng được map (kể cả khi PORT đặt ở shell).
+    environment:
+      PORT: ${PORT:-3000}
+    ports:
+      - "${HOST_IP:-0.0.0.0}:${HOST_PORT:-3000}:${PORT:-3000}"
+    restart: unless-stopped
+
+  # Nhắc nhở push hằng ngày (thay Vercel Cron). Thiếu CRON_SECRET thì tự thoát, không ảnh hưởng `web`.
+  cron:
+    image: alpine:3.20
+    env_file:
+      - ${ENV_FILE:-.env}
+    environment:
+      PORT: ${PORT:-3000}
+    volumes:
+      - ./docker/daily-reminder-cron.sh:/daily-reminder-cron.sh:ro
+    entrypoint: ["sh", "/daily-reminder-cron.sh"]
+    depends_on:
+      - web
+    restart: on-failure
+
+secrets:
+  app_env:
+    file: ${ENV_FILE:-.env}
