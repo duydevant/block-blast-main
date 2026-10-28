@@ -14,12 +14,12 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useI18n } from "@/lib/i18n"
 import { HowToPlayVisual } from "@/components/game-ui/how-to-play-visual"
-import { useBlockPuzzleGameStore } from "../store/block-puzzle-game-store"
 import { GAME_PANEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./game-ui-styles"
+import { useRestartCurrentMode } from "./use-special-mode-launcher"
 
 export function RestartConfirmDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t } = useI18n()
-  const startNewGame = useBlockPuzzleGameStore((state) => state.startNewGame)
+  const startNewGame = useRestartCurrentMode()
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

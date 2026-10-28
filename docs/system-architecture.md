@@ -72,6 +72,8 @@ providers/     — React Query, Firebase Auth và các provider gốc.
 
 ### Sự kiện tuần, màn chơi, đấu 1v1
 
+- Các chế độ độc lập (`modules/block-puzzle/special-game-modes.ts`, `store/parked-mode-games.ts`): mỗi chế độ (Vô tận, thử thách ngày, sự kiện, màn chơi, thách đấu) giữ một ván dở trong `parkedGames` của save. Vào chế độ khác → cất ván đang chơi (không nộp), lấy ván dở của chế độ đích nếu còn đúng ngày / tuần / màn / thách đấu, không thì xin ván mới (ván cất cũ bị bỏ thì nộp phần đã chơi). Màn chơi hiện "đang tải" trong lúc chuyển. Nút Play chung = `/play?endless=1`; "Ván mới" = ván mới cùng chế độ. Đấu 1v1 không cất (rời = bỏ trận, có hỏi).
+
 - Engine: `createNewGame(seed, variant)` với `GameVariant { startBoard, moveLimit, replaceCharges }`; `moveLimit` hết = hết ván (không hồi sinh vượt); `linesCleared` đếm trong state. Biến thể **luôn** suy từ catalog (`modules/game-modes/`) theo mode + id lưu trong session — client không gửi biến thể.
 - Sự kiện tuần: luật xoay vòng theo tuần ISO (`weekly-event-catalog.ts`), session lưu `eventWeek`/`eventRuleId`, bảng `event-YYYY-Www` (tab "Sự kiện tuần", nhận cả ván Vô tận trong tuần), ô cất khoá.
 - Màn chơi: 20 màn (`level-catalog.ts`) seed + bàn cố định, mục tiêu điểm/dòng + giới hạn nước; seed/giới hạn chọn bằng bot và test bot giải được từng màn. Đạt mục tiêu → client chốt ván (`endVariantRun`) → server replay tính sao (≤60% nước = 3 sao, ≤80% = 2), `users.levelStars`, 20 xu mỗi sao mới. Chơi offline được (sao lưu local, `level-progress-store`).

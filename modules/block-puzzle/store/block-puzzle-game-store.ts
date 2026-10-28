@@ -14,6 +14,7 @@ import {
   parseSavedRankedGameCloudState,
   type RankedGameCloudState,
 } from "./ranked-game-cloud-state"
+import { type GameModeSlot, modeSlotOf, type ParkedGames, parseParkedGames, queueParkedGame } from "./parked-mode-games"
 import { challengeGameState, dailyGameState, freshGameState, variantGameState, withCurrentGameQueued } from "./ranked-game-start-states"
 import { safeLocalStorage } from "./safe-local-storage"
 import { parseSavedGame } from "./saved-game-schema"
@@ -27,6 +28,17 @@ interface BlockPuzzleGameStore extends RankedGameCloudState {
   game: GameState | null
   best: number
   hasHydrated: boolean
+  /** Ván dở của các chế độ khác (mỗi chế độ một ván) — sang chế độ khác không làm mất ván đang chơi. */
+  parkedGames: ParkedGames
+  /**
+   * Cất ván đang chơi vào ngăn của chế độ nó (ván đã hết thì đưa vào hàng chờ nộp), để trống ván hiện tại
+   * (màn chơi hiện "đang tải") cho tới khi lấy ván của chế độ khác ra hoặc ván mới được cấp. Trả ngăn đã cất.
+   */
+  parkCurrentGame: () => GameModeSlot | null
+  /** Lấy ván dở của chế độ ra chơi tiếp (chỉ khi ván hiện tại đang trống); false nếu không có. */
+  resumeParkedGame: (slot: GameModeSlot) => boolean
+  /** Bỏ ván cất của chế độ (VD sang ngày mới, màn khác): nộp phần đã chơi nếu tính điểm. */
+  discardParkedGame: (slot: GameModeSlot) => void
   startNewGame: () => void
   /** Kết thúc ván hiện tại (đưa vào hàng chờ nếu tính điểm) và vào thử thách hằng ngày. */
   startDailyGame: (start: IssuedDailyStart) => void
@@ -72,8 +84,43 @@ export const useBlockPuzzleGameStore = create<BlockPuzzleGameStore>()(
         game: null,
         best: 0,
         hasHydrated: false,
+        parkedGames: {},
         ...EMPTY_RANKED_GAME_CLOUD_STATE,
         startNewGame: () => set(freshGameState(get())),
+        parkCurrentGame: () => {
+          const state = get()
+          const slot = modeSlotOf(state)
+          const keep = state.game !== null && !state.game.isGameOver && slot !== null
+          const cleared = { game: null, rankedSession: null, actionLog: [], dailyDay: null, challenge: null, variantRun: null }
+          if (!keep || !state.game || !slot) {
+            // Ván đã hết (hoặc đấu 1v1) → không cất; ván tính điểm chưa nộp thì đưa vào hàng chờ như khi bắt đầu ván mới.
+            set({ ...cleared, pendingSubmissions: withCurrentGameQueued(state) })
+            return null
+          }
+          const { game, rankedSession, actionLog, dailyDay, challenge, variantRun } = state
+          set({
+            ...cleared,
+            pendingSubmissions: queueParkedGame(state.pendingSubmissions, state.parkedGames[slot]),
+            parkedGames: { ...state.parkedGames, [slot]: { game, rankedSession, actionLog, dailyDay, challenge, variantRun } },
+          })
+          return slot
+        },
+        resumeParkedGame: (slot) => {
+          const { game, parkedGames } = get()
+          const parked = parkedGames[slot]
+          if (game !== null || !parked) return false
+          const rest = { ...parkedGames }
+          delete rest[slot]
+          set({ ...parked, parkedGames: rest })
+          return true
+        },
+        discardParkedGame: (slot) => {
+          const { parkedGames, pendingSubmissions } = get()
+          if (!parkedGames[slot]) return
+          const rest = { ...parkedGames }
+          delete rest[slot]
+          set({ parkedGames: rest, pendingSubmissions: queueParkedGame(pendingSubmissions, parkedGames[slot]) })
+        },
         startDailyGame: (start) => set(dailyGameState(get(), start)),
         startChallengeGame: (start) => set(challengeGameState(get(), start)),
         startVariantGame: (start) => set(variantGameState(get(), start)),
@@ -102,10 +149,18 @@ export const useBlockPuzzleGameStore = create<BlockPuzzleGameStore>()(
         removePendingSubmission: (gameId) =>
           set({ pendingSubmissions: get().pendingSubmissions.filter((item) => item.gameId !== gameId) }),
         dropCloudStateForOtherUser: (uid) => {
-          const { rankedSession, nextRankedSeed, pendingSubmissions, challenge, variantRun } = get()
+          const { rankedSession, nextRankedSeed, pendingSubmissions, challenge, variantRun, parkedGames } = get()
           const stale = (item: { uid: string } | null) => item !== null && item.uid !== uid
-          if (!stale(rankedSession) && !stale(nextRankedSeed) && !pendingSubmissions.some(stale)) return
+          const staleParked = Object.values(parkedGames).some((parked) => stale(parked.rankedSession))
+          if (!stale(rankedSession) && !stale(nextRankedSeed) && !pendingSubmissions.some(stale) && !staleParked) return
           set({
+            // Ván cất của tài khoản cũ: vẫn chơi tiếp được nhưng thành ván không tính điểm.
+            parkedGames: Object.fromEntries(
+              Object.entries(parkedGames).map(([slot, parked]) => [
+                slot,
+                stale(parked.rankedSession) ? { ...parked, rankedSession: null, challenge: null } : parked,
+              ])
+            ),
             rankedSession: stale(rankedSession) ? null : rankedSession,
             // Ván thách đấu của tài khoản cũ thành ván offline → bỏ nhãn/so điểm thách đấu.
             challenge: stale(rankedSession) ? null : challenge,
@@ -133,6 +188,7 @@ export const useBlockPuzzleGameStore = create<BlockPuzzleGameStore>()(
         dailyDay: state.dailyDay,
         challenge: state.challenge,
         variantRun: state.variantRun,
+        parkedGames: state.parkedGames,
       }),
       // Đổi version: bỏ ván dở (có thể không khớp catalog mới), chỉ giữ kỷ lục.
       migrate: (persisted) => ({ game: null, best: parseSavedGame(persisted).best }),
@@ -144,7 +200,8 @@ export const useBlockPuzzleGameStore = create<BlockPuzzleGameStore>()(
         const ranked = game
           ? { rankedSession: cloud.rankedSession, actionLog: cloud.actionLog, dailyDay: cloud.dailyDay, challenge: cloud.challenge, variantRun: cloud.variantRun }
           : { rankedSession: null, actionLog: [], dailyDay: null, challenge: null, variantRun: null }
-        return { ...current, ...cloud, ...ranked, game, best: Math.max(saved.best, game?.score ?? 0) }
+        const record = typeof persisted === "object" && persisted !== null ? (persisted as Record<string, unknown>) : {}
+        return { ...current, ...cloud, ...ranked, game, best: Math.max(saved.best, game?.score ?? 0), parkedGames: parseParkedGames(record.parkedGames) }
       },
       onRehydrateStorage: () => () => {
         const state = useBlockPuzzleGameStore.getState()

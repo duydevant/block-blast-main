@@ -3,6 +3,8 @@ export enum Routes {
   PLAY = "/play",
   /** Vào thẳng thử thách hằng ngày (màn chơi đọc query rồi bỏ đi). */
   PLAY_DAILY = "/play?daily=1",
+  /** Nút Play chung: luôn vào ván Vô tận (ván Vô tận đang dở thì chơi tiếp). */
+  PLAY_ENDLESS = "/play?endless=1",
   LEADERBOARD = "/leaderboard",
   /** Trang thách đấu: `${Routes.CHALLENGE}/{id}`. */
   CHALLENGE = "/c",

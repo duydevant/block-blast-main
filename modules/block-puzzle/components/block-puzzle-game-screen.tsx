@@ -72,7 +72,8 @@ export function BlockPuzzleGameScreen() {
   useLevelRunEffects()
   const modeLauncher = useSpecialModeLauncher()
 
-  if (!gameReady || !settingsReady) {
+  // Đang mở chế độ từ link (cất ván cũ, lấy / xin ván của chế độ mới) → không vẽ ván của chế độ khác.
+  if (!gameReady || !settingsReady || modeLauncher.launching) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-violet-200/70" role="status">
         {t("game.loading")}

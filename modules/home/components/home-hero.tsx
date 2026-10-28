@@ -21,7 +21,7 @@ export function HomeHero() {
         <HandIcon className="size-4.5" aria-hidden="true" />
         {t("home.hint")}
       </p>
-      <Link href={Routes.PLAY} className={`${CHUNKY_BUTTON.primary} h-16 w-full text-[28px] [&_svg]:size-6.5`}>
+      <Link href={Routes.PLAY_ENDLESS} className={`${CHUNKY_BUTTON.primary} h-16 w-full text-[28px] [&_svg]:size-6.5`}>
         <PlayIcon className="fill-current" aria-hidden="true" />
         {t("ui.play")}
       </Link>

@@ -94,7 +94,7 @@ export function LeaderboardTable({ period, initialTop }: { period: LeaderboardPe
           ) : (
             <span className="font-extrabold">{t("leaderboard.notRanked")}</span>
           )}
-          <Link href={Routes.PLAY} className="ml-auto flex h-10 shrink-0 items-center rounded-xl bg-[#04211e] px-4 font-extrabold text-[#9fe3db]">
+          <Link href={Routes.PLAY_ENDLESS} className="ml-auto flex h-10 shrink-0 items-center rounded-xl bg-[#04211e] px-4 font-extrabold text-[#9fe3db]">
             {t("ui.play")}
           </Link>
         </div>

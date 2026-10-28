@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTit
 import { useI18n } from "@/lib/i18n"
 import { Routes } from "@/lib/routes"
 import { GAME_PANEL } from "@/modules/block-puzzle/components/game-ui-styles"
+import { enterMode } from "@/modules/block-puzzle/special-game-modes"
 import { useBlockPuzzleGameStore } from "@/modules/block-puzzle/store/block-puzzle-game-store"
 import { guestTagFromUid } from "@/modules/player-profile/player-profile-types"
 import { useSignedInUid } from "@/modules/player-profile/use-player-profile-query"
@@ -39,7 +40,6 @@ export function DuelGameOverPanel({ run }: { run: DuelRun }) {
   const over = useBlockPuzzleGameStore((state) => state.game?.isGameOver ?? false)
   const myLocalScore = useBlockPuzzleGameStore((state) => state.game?.score ?? 0)
   const endedEarly = useBlockPuzzleGameStore((state) => state.game?.endedEarly ?? false)
-  const startNewGame = useBlockPuzzleGameStore((state) => state.startNewGame)
   const { state, now } = useDuelMatch(run.duelId, run.clockOffset)
   const opponentBoard = useDuelBoard(run.duelId, duelRoundKey(run.round), run.seed, run.opponent.uid)
   // Key theo ván: ván đấu mới không thừa hưởng trạng thái "đã hiện" của ván trước.
@@ -144,7 +144,7 @@ export function DuelGameOverPanel({ run }: { run: DuelRun }) {
           {t("duel.backToRoom")}
         </Link>
         {finished && (
-          <button className="text-sm font-semibold text-violet-200/80 underline underline-offset-2 hover:text-white" onClick={startNewGame}>
+          <button className="text-sm font-semibold text-violet-200/80 underline underline-offset-2 hover:text-white" onClick={() => void enterMode({ kind: "endless" })}>
             {t("duel.playClassic")}
           </button>
         )}

@@ -15,6 +15,7 @@ import { useLastGameRewardsStore } from "@/modules/progression/last-game-rewards
 import { InstallAppButton } from "@/modules/pwa/components/install-app-button"
 
 import { useBlockPuzzleGameStore } from "../store/block-puzzle-game-store"
+import { useRestartCurrentMode } from "./use-special-mode-launcher"
 import { GameOverShareActions } from "./game-over-share-actions"
 import { GAME_PANEL, SECONDARY_BUTTON } from "./game-ui-styles"
 
@@ -94,7 +95,8 @@ export function GameOverDialog() {
   const { t, formatNumber } = useI18n()
   const game = useBlockPuzzleGameStore((state) => state.game)
   const best = useBlockPuzzleGameStore((state) => state.best)
-  const startNewGame = useBlockPuzzleGameStore((state) => state.startNewGame)
+  // "Ván mới" = ván mới của chính chế độ đang chơi (sự kiện → sự kiện…), không nhảy sang Vô tận.
+  const startNewGame = useRestartCurrentMode()
   const revive = useBlockPuzzleGameStore((state) => state.revive)
   // Ván đã nộp (VD vừa tạo thách đấu) thì hồi sinh không còn được tính → ẩn.
   const submitted = useBlockPuzzleGameStore((state) => state.rankedSession?.queued ?? false)

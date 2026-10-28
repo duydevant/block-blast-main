@@ -27,7 +27,7 @@ export function HowToPlayGuide() {
       <header className="flex flex-col gap-3">
         <h1 className="text-3xl font-bold tracking-tight">{t("guide.title")}</h1>
         <p className="text-muted-foreground">{t("guide.intro")}</p>
-        <Button className="self-start" nativeButton={false} render={<Link href={Routes.PLAY} />}>
+        <Button className="self-start" nativeButton={false} render={<Link href={Routes.PLAY_ENDLESS} />}>
           <PlayIcon data-icon="inline-start" />
           {t("guide.play")}
         </Button>
