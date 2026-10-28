@@ -8,8 +8,9 @@ import { findLevel } from "@/modules/game-modes/level-catalog"
 import type { StartRankedGameResponse } from "@/modules/player-profile/player-profile-types"
 import { currentWeeklyEvent } from "@/server/daily/current-weekly-event"
 import { DUEL_EARLY_START_TOLERANCE_MS } from "@/modules/duel/duel-types"
-import { duelRef, mirrorDuelState, toDuelState } from "@/server/duels/duel-documents"
-import { parseDuel } from "@/server/duels/duel-store"
+import { DUEL_RTDB_PATH, duelRoundKey } from "@/modules/duel/duel-types"
+import { duelRef, mirrorDuelState, parseDuel, toDuelState, writeDuel } from "@/server/duels/duel-documents"
+import { getAdminDatabase } from "@/server/firebase/firebase-admin-app"
 import { getAdminFirestore } from "@/server/firebase/firebase-admin-app"
 import { HttpError } from "@/server/http/authenticated-json-route"
 import { parseStoredPlayer, USERS_COLLECTION } from "@/server/profile/stored-player-document"
@@ -49,8 +50,9 @@ export async function createLevelSession(
 }
 
 /**
- * Ván đấu 1v1: chỉ thành viên, chỉ khi trận đang diễn ra; mỗi người đúng một ván (gọi lại → 409,
- * ván đang chơi đã nằm trong save của máy).
+ * Ván đấu 1v1: chỉ thành viên, chỉ khi ván hiện tại của phòng đang diễn ra; mỗi người đúng một ván mỗi lượt.
+ * Gọi lại khi chưa đi nước nào (mất phản hồi lần trước) → trả lại ván đã cấp; đã đi nước rồi → 409 (ván đang nằm
+ * trong save của máy kia, chơi song song sẽ làm hỏng chuỗi nước). Điểm ván đấu chấm từ nước đi trên RTDB.
  */
 export async function createDuelSession(
   uid: string,
@@ -69,22 +71,25 @@ export async function createDuelSession(
     if (duel.status !== "playing" || duel.startAt === null || duel.endsAt === null || now < duel.startAt - DUEL_EARLY_START_TOLERANCE_MS || now >= duel.endsAt) {
       throw new HttpError(409, "duel-not-playing")
     }
-    if (duel.sessions[uid]) throw new HttpError(409, "duel-already-started")
-
-    tx.set(sessionRef, fields(duel.seed, { duelId }))
-    tx.update(ref, { [`sessions.${uid}`]: sessionRef.id })
+    const existing = duel.sessions[uid]
+    const updated = existing ? duel : writeDuel(tx, ref, duel, { sessions: { ...duel.sessions, [uid]: sessionRef.id } }, now)
+    if (!existing) tx.set(sessionRef, fields(duel.seed, { duelId }))
     const opponent = uid === duel.hostUid ? { uid: duel.guestUid ?? "", name: duel.guestName } : { uid: duel.hostUid, name: duel.hostName }
     const response: StartRankedGameResponse = {
-      gameId: sessionRef.id,
+      gameId: existing ?? sessionRef.id,
       seed: duel.seed,
       stashUnlocked: false,
       mode: "duel",
       day: null,
       challenge: null,
-      duel: { id: duelId, opponent, startAt: duel.startAt, endsAt: duel.endsAt, serverNow: now },
+      duel: { id: duelId, round: duel.round, opponent, startAt: duel.startAt, endsAt: duel.endsAt, serverNow: now },
     }
-    return { response, state: toDuelState(duelId, { ...duel, sessions: { ...duel.sessions, [uid]: sessionRef.id } }, now) }
+    return { response, state: toDuelState(duelId, updated, now), existing: Boolean(existing), round: duel.round }
   })
+  if (result.existing) {
+    const moves = await getAdminDatabase().ref(`${DUEL_RTDB_PATH}/${duelId}/moves/${duelRoundKey(result.round)}/${uid}`).limitToFirst(1).get()
+    if (moves.exists()) throw new HttpError(409, "duel-already-started")
+  }
   // Phòng thấy người này đã vào ván (không đưa quay lại ván đã chơi xong).
   await mirrorDuelState(result.state)
   return result.response

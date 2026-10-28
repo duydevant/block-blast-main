@@ -4,15 +4,11 @@ import { FieldValue, type Firestore } from "firebase-admin/firestore"
 
 import { replayRecordedGame, type RecordedGameAction } from "@/modules/block-puzzle/engine/replay-recorded-game-actions"
 import { NO_GAME_REWARDS, type SubmitRankedGameResponse } from "@/modules/player-profile/player-profile-types"
-import type { DuelState } from "@/modules/duel/duel-types"
 import { findLevel, starsForLevel } from "@/modules/game-modes/level-catalog"
 import { dailyMissionProgressSchema } from "@/modules/progression/daily-mission-catalog"
 import { advanceDailyStreak } from "@/server/daily/advance-daily-streak"
 import { dayKeyFor } from "@/server/daily/daily-challenge-calendar"
 import { dailyRunCounts } from "@/server/daily/daily-run-counts"
-import { duelRef, mirrorDuelState } from "@/server/duels/duel-documents"
-import { parseDuel } from "@/server/duels/duel-store"
-import { recordDuelResultInTransaction } from "@/server/duels/record-duel-result"
 import { getAdminFirestore } from "@/server/firebase/firebase-admin-app"
 import { HttpError } from "@/server/http/authenticated-json-route"
 import { boardIdsForRankedGame } from "@/server/leaderboards/leaderboard-board-ids"
@@ -39,7 +35,7 @@ function challengeResultRefs(db: Firestore, challengeId: string, uid: string) {
 }
 
 type SubmitOutcome =
-  | { ok: true; response: SubmitRankedGameResponse; duelState?: DuelState | null }
+  | { ok: true; response: SubmitRankedGameResponse }
   | { ok: false; error: HttpError }
 
 /**
@@ -48,6 +44,7 @@ type SubmitOutcome =
  * Daily: chỉ lượt đã giữ chỗ lúc bắt đầu (lượt đầu của ngày) và nộp chậm nhất hết ngày hôm sau mới vào
  * bảng ngày + streak (`dailyRunCounts`); lượt khác vẫn cộng thống kê.
  * Challenge: không vào bảng xếp hạng, chỉ ghi điểm tốt nhất vào challenges/{id}/results/{uid}.
+ * Duel: chỉ cộng thống kê/thưởng; kết quả trận do server chấm từ nước đi trên RTDB (settle-duel-round).
  * Mọi chế độ: cộng XP/xu, nhiệm vụ ngày (theo ngày nộp), thành tích, quà mời bạn.
  */
 export async function recordSubmittedRankedGame(
@@ -70,7 +67,7 @@ export async function recordSubmittedRankedGame(
     if (session.data.status !== "open") return { ok: false, error: new HttpError(409, "game-already-submitted") }
 
     const finishedAt = FieldValue.serverTimestamp()
-    const { mode, day, seed, stashUnlocked, challengeId, eventWeek, levelId, duelId } = session.data
+    const { mode, day, seed, stashUnlocked, challengeId, eventWeek, levelId } = session.data
     const dailyResultRef = day ? userRef.collection(DAILY_RESULTS_SUBCOLLECTION).doc(day) : null
     const dailyClaim = dailyResultRef ? (await tx.get(dailyResultRef)).data() : undefined
     const countsForDaily = day !== null && dailyRunCounts({ claim: dailyClaim, gameId, day, today })
@@ -109,8 +106,6 @@ export async function recordSubmittedRankedGame(
     const missionsRef = userRef.collection(MISSIONS_SUBCOLLECTION).doc(today)
     const inviterRef = referralIsDue(stored, summary.moveCount) && stored.referredBy ? db.collection(USERS_COLLECTION).doc(stored.referredBy) : null
     const [missionsSnap, inviterSnap] = await tx.getAll(missionsRef, ...(inviterRef ? [inviterRef] : []))
-    const duelDocRef = mode === "duel" && duelId ? duelRef(db, duelId) : null
-    const duel = duelDocRef ? parseDuel((await tx.get(duelDocRef)).data()) : null
     const levelDefinition = mode === "level" && levelId !== null ? findLevel(levelId) : undefined
     const progression = applyProgressionForVerifiedGame({
       stored,
@@ -170,12 +165,10 @@ export async function recordSubmittedRankedGame(
       },
       { merge: true }
     )
-    const duelState = duel && duelId ? recordDuelResultInTransaction(tx, db, duelId, duel, uid, summary.score, now.getTime()) : null
     tx.update(sessionRef, { status: "done", score: summary.score, moveCount: summary.moveCount, finishedAt })
-    return { ok: true, response: { score: summary.score, stats, improvedBoards: improved, rewards: progression.rewards }, duelState }
+    return { ok: true, response: { score: summary.score, stats, improvedBoards: improved, rewards: progression.rewards } }
   })
 
   if (!outcome.ok) throw outcome.error
-  if (outcome.duelState) await mirrorDuelState(outcome.duelState)
   return outcome.response
 }

@@ -44,20 +44,11 @@ export function LevelStarsRow({ stars }: { stars: number }) {
   )
 }
 
-/** Ghi chú cuối hộp hết ván cho sự kiện / đấu 1v1 (màn chơi đã có bảng kết quả riêng). */
+/** Ghi chú cuối hộp hết ván cho sự kiện (màn chơi có bảng kết quả riêng, đấu 1v1 có bảng trận riêng). */
 export function VariantGameOverNote() {
   const { t } = useI18n()
   const run = useBlockPuzzleGameStore((state) => state.variantRun)
-  if (!run || run.kind === "level") return null
-  if (run.kind === "duel") {
-    return (
-      <p className={NOTE}>
-        <Link href={`${Routes.DUEL}/${run.duelId}`} className={NOTE_LINK}>
-          {t("duel.viewResult")}
-        </Link>
-      </p>
-    )
-  }
+  if (!run || run.kind !== "event") return null
   return (
     <p className={NOTE}>
       <Link href={Routes.EVENT} className={NOTE_LINK}>

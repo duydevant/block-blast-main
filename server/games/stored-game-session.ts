@@ -25,5 +25,6 @@ export type StoredGameSession = z.infer<typeof storedSessionSchema>
 export function variantForSession(session: StoredGameSession): GameVariant | undefined {
   if (session.mode === "event" && session.eventRuleId) return variantForRun({ kind: "event", ruleId: session.eventRuleId })
   if (session.mode === "level" && session.levelId !== null) return variantForRun({ kind: "level", levelId: session.levelId })
+  if (session.mode === "duel") return variantForRun({ kind: "duel" })
   return undefined
 }

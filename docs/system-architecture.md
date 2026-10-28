@@ -18,8 +18,8 @@ providers/     — React Query, Firebase Auth và các provider gốc.
 | Dịch vụ | Dùng cho |
 |---|---|
 | Auth | Khách ẩn danh tự tạo khi vào app; liên kết Google giữ nguyên uid |
-| Firestore | `challenges/{id}` (+ `results/{uid}`), `users/{uid}` (tên, `stashUnlocked`, `stats`, `streak`, `xp`, `coins`, `unlockedThemes`, `achievements`, mời bạn), `users/{uid}/daily/{YYYYMMDD}` (lượt tính điểm daily), `users/{uid}/missions/{YYYYMMDD}` (tiến độ nhiệm vụ ngày), `referralCodes/{code}` (→ uid người mời), `duels/{id}` (phòng 1v1: chủ/khách, seed, giờ server, điểm đã replay, người thắng), `pushSubscriptions/{sha256(endpoint)}` (đăng ký nhắc nhở: uid, keys, locale, ngày gửi gần nhất), `gameSessions/{gameId}` (seed, `mode`, `day`, trạng thái, TTL `expireAt`), `leaderboards/{boardId}` (snapshot top 100) + `leaderboards/{boardId}/entries/{uid}` (điểm tốt nhất) |
-| Realtime Database | `/presence/{uid}` = timestamp khi đang ở màn chơi (chỉ chính chủ ghi, không ai đọc từ client); `/duels/{id}/state` (server ghi, ai đăng nhập + biết id đọc được) + `/duels/{id}/live/{uid}` (điểm trực tiếp, chỉ thành viên ghi phần của mình) |
+| Firestore | `challenges/{id}` (+ `results/{uid}`), `users/{uid}` (tên, `stashUnlocked`, `stats`, `streak`, `xp`, `coins`, `unlockedThemes`, `achievements`, mời bạn), `users/{uid}/daily/{YYYYMMDD}` (lượt tính điểm daily), `users/{uid}/missions/{YYYYMMDD}` (tiến độ nhiệm vụ ngày), `referralCodes/{code}` (→ uid người mời), `duels/{code}` (phòng 1v1 nhiều ván: chủ/khách, `round` + seed + giờ server của ván hiện tại, `sessions`, điểm chốt, người thắng, `series`, `ready`, `history`, `version`), `pushSubscriptions/{sha256(endpoint)}` (đăng ký nhắc nhở: uid, keys, locale, ngày gửi gần nhất), `gameSessions/{gameId}` (seed, `mode`, `day`, trạng thái, TTL `expireAt`), `leaderboards/{boardId}` (snapshot top 100) + `leaderboards/{boardId}/entries/{uid}` (điểm tốt nhất) |
+| Realtime Database | `/presence/{uid}` = timestamp khi đang ở màn chơi (chỉ chính chủ ghi, không ai đọc từ client); `/duels/{code}/state` (server ghi, có `version` chống ghi lùi; ai đăng nhập + biết mã đọc được) + `/duels/{code}/moves/{roundKey}/{uid}/{seq}` = `{a, at}` (từng nước đi; chỉ chính chủ là người chơi ghi, append-only, `at == now`, trong giờ ván) + `/duels/{code}/online/{uid}` (ai đang mở phòng / ván) |
 
 - Client **không** đọc/ghi Firestore trực tiếp: `firestore.rules` và `database.rules.json` chặn hết. Mọi truy cập qua API route dùng Admin SDK (`server/firebase/firebase-admin-app.ts`).
 - API (đều cần `Authorization: Bearer <Firebase ID token>`, uid lấy từ token):
@@ -28,7 +28,7 @@ providers/     — React Query, Firebase Auth và các provider gốc.
   - `GET /api/daily` → `{ day, todayScore, runInProgress, streak, missions }`.
   - `POST /api/shop/themes { themeId }` → mua theme bằng xu (409 `not-enough-coins` / `theme-owned`), trả profile.
   - `POST/DELETE /api/push/subscriptions` → bật/tắt nhắc nhở; `GET /api/presence` (công khai) → `{ playing }`; `GET|POST /api/cron/daily-reminders` (Bearer `CRON_SECRET`).
-  - `POST /api/games/start` còn nhận `mode: "event" | "level" (levelId) | "duel" (duelId)`; `POST /api/duels { rematchOf? }`, `POST /api/duels/{id}/join`, `GET /api/duels/{id}` (công khai).
+  - `POST /api/games/start` còn nhận `mode: "event" | "level" (levelId) | "duel" (duelId)`; `POST /api/duels`, `POST /api/duels/{id}/join`, `POST /api/duels/{id}/settle`, `POST /api/duels/{id}/ready { ready }`, `GET /api/duels/{id}` (công khai, chốt ván quá hạn).
   - `GET /api/referral` → `{ code, referralCount }` (tạo mã lần đầu); `POST /api/referral/claim { code }` → gắn người mời.
   - `POST /api/challenges { gameId, actions? }` → `{ challengeId }`; `GET /api/challenges/{id}` (công khai).
   - `GET /api/leaderboards/{daily|weekly|alltime}` → bảng hiện hành `{ boardId, top, me: { rank, score, nextScore } }`.
@@ -75,7 +75,12 @@ providers/     — React Query, Firebase Auth và các provider gốc.
 - Engine: `createNewGame(seed, variant)` với `GameVariant { startBoard, moveLimit, replaceCharges }`; `moveLimit` hết = hết ván (không hồi sinh vượt); `linesCleared` đếm trong state. Biến thể **luôn** suy từ catalog (`modules/game-modes/`) theo mode + id lưu trong session — client không gửi biến thể.
 - Sự kiện tuần: luật xoay vòng theo tuần ISO (`weekly-event-catalog.ts`), session lưu `eventWeek`/`eventRuleId`, bảng `event-YYYY-Www` (tab "Sự kiện tuần", nhận cả ván Vô tận trong tuần), ô cất khoá.
 - Màn chơi: 20 màn (`level-catalog.ts`) seed + bàn cố định, mục tiêu điểm/dòng + giới hạn nước; seed/giới hạn chọn bằng bot và test bot giải được từng màn. Đạt mục tiêu → client chốt ván (`endVariantRun`) → server replay tính sao (≤60% nước = 3 sao, ≤80% = 2), `users.levelStars`, 20 xu mỗi sao mới. Chơi offline được (sao lưu local, `level-progress-store`).
-- Đấu 1v1: `POST /api/duels` tạo phòng → link `/duel/{id}` → người kia `POST /api/duels/{id}/join` → đếm ngược 5s, 3 phút (giờ server). Mỗi người xin đúng 1 session `mode: "duel"` (cùng seed). Client ghi điểm trực tiếp lên RTDB (chỉ hiển thị); kết quả = điểm server replay, nộp trước hạn + 60s ân hạn; đủ hai điểm → chốt ngay, quá hạn → `GET /api/duels/{id}` chốt (không nộp = thua). Thống kê `users.duelStats`; đấu lại gắn `rematchId` vào trận cũ. Ghép trận ngẫu nhiên chưa làm.
+- Đấu 1v1 (phòng nhiều ván, cùng mã):
+  - `POST /api/duels` tạo phòng → link/mã `/duel/{code}` → người kia `join` → ván 1: đếm ngược 5s, 3 phút (giờ server). Mỗi người xin 1 session `mode: "duel"` mỗi ván (cùng seed, `DUEL_VARIANT` = không hồi sinh).
+  - Mỗi nước đi được ghi ngay lên RTDB `moves/{roundKey}/{uid}/{0000…}` kèm giờ server (`modules/duel/duel-move-stream.ts`). Đối thủ + người xem replay nước đi từ seed để vẽ bàn thật (`use-duel-board.ts`); server chấm từ cùng chuỗi nước (`settle-duel-round.ts`, chỉ nước liên tục, ghi trước `endsAt + 3s`).
+  - Chốt ván (`decideDuelRound`): cả hai hết nước → so điểm; một người hết nước và người kia **vượt** điểm → thắng ngay; còn lại người sống chơi tới hết nước / hết 3 phút. Client gọi `settle` khi mình dừng hoặc vừa vượt điểm; `GET` chốt ván quá hạn.
+  - Hết ván → bảng "Trận đấu" (không ván mới / hồi sinh), xem bàn đối thủ tới khi có kết quả. Đấu lại: hai người `ready` → ván mới cùng phòng (seed mới), `series` + `history` giữ tỉ số; nước đi ván cũ bị xoá.
+  - Người xem: mở link/mã khi phòng đủ người → hai bàn trực tiếp, tỉ số, số người xem (`online`). XP/thống kê ván vẫn qua `/api/games/submit`; `users.duelStats` cộng khi chốt ván. Ván bị chốt sớm (hết giờ/bỏ trận) mang `endedEarly` để tải lại vẫn là hết ván.
 - Kết nối RTDB dùng chung, đếm người giữ (`modules/realtime/realtime-connection.ts`) để presence và phòng đấu không ngắt nhau.
 
 ### Phần thưởng: thưởng ngày, mục tiêu sự kiện

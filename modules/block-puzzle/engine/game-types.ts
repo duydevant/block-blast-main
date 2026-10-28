@@ -73,6 +73,8 @@ export interface GameState {
   reviveUsed?: boolean
   /** Chế độ màn chơi: đặt đủ số nước này thì hết ván (kể cả còn chỗ). */
   moveLimit?: number
+  /** Ván bị chốt khi vẫn còn chỗ đặt (đấu 1v1 hết giờ / bỏ trận): tải lại save vẫn là hết ván. */
+  endedEarly?: boolean
   /** Tổng số hàng + cột đã xoá trong ván (mục tiêu màn chơi). */
   linesCleared?: number
   lastMove: MoveResult | null
@@ -87,6 +89,8 @@ export interface GameVariant {
   startBoard?: BoardCells
   moveLimit?: number
   replaceCharges?: number
+  /** Không có hồi sinh (đấu 1v1): ván bắt đầu như đã dùng lượt hồi sinh. */
+  noRevive?: boolean
 }
 
 export type GameAction =

@@ -16,8 +16,8 @@ export function isOutOfMoves(state: Pick<GameState, "moveLimit" | "moveCount">):
 }
 
 /** Hết ván: hết nước của màn, hoặc không khối nào (kể cả khối cất) còn chỗ đặt. */
-function computeGameOver(state: Pick<GameState, "moveLimit" | "moveCount">, board: BoardCells, tray: TraySlots, stash: GameState["stash"]): boolean {
-  return isOutOfMoves(state) || !hasAnyMove(board, tray, stash)
+function computeGameOver(state: Pick<GameState, "moveLimit" | "moveCount" | "endedEarly">, board: BoardCells, tray: TraySlots, stash: GameState["stash"]): boolean {
+  return Boolean(state.endedEarly) || isOutOfMoves(state) || !hasAnyMove(board, tray, stash)
 }
 
 export function createNewGame(seed: number, variant: GameVariant = {}): GameState {
@@ -37,7 +37,7 @@ export function createNewGame(seed: number, variant: GameVariant = {}): GameStat
     stash: null,
     stashUnlocked: false,
     replaceCharges: variant.replaceCharges ?? POWER_UP_RULES.replaceChargesPerGame,
-    reviveUsed: false,
+    reviveUsed: variant.noRevive ?? false,
     ...(variant.moveLimit !== undefined ? { moveLimit: variant.moveLimit } : {}),
     linesCleared: 0,
     lastMove: null,

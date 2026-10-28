@@ -80,7 +80,7 @@ export const useBlockPuzzleGameStore = create<BlockPuzzleGameStore>()(
         endVariantRun: () => {
           const { game, variantRun } = get()
           if (!game || !variantRun || (game.isGameOver && game.reviveUsed)) return
-          set({ game: { ...game, isGameOver: true, reviveUsed: true, lastMove: null } })
+          set({ game: { ...game, isGameOver: true, reviveUsed: true, endedEarly: true, lastMove: null } })
         },
         finishTutorial: () => {
           const state = get()

@@ -122,6 +122,9 @@ const rankedStateSchema = z.object({
       z.object({
         kind: z.literal("duel"),
         duelId: z.string().regex(DUEL_ID_PATTERN),
+        // Save trước khi có phòng nhiều ván: round 0 (không trùng ván nào của phòng mới).
+        round: z.number().int().nonnegative().catch(0),
+        seed: z.number().int().nonnegative().catch(0),
         opponent: z.object({ uid: z.string().max(128), name: z.string().max(64).nullable() }),
         startAt: z.number(),
         endsAt: z.number(),

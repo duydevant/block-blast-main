@@ -1,25 +1,10 @@
 import { z } from "zod"
 
-import { STASH_SLOT, TRAY_SIZE } from "@/modules/block-puzzle/engine/game-types"
 import { CHALLENGE_ID_PATTERN } from "@/modules/challenge/challenge-types"
 import { DUEL_ID_PATTERN } from "@/modules/duel/duel-types"
 import { LEVEL_COUNT } from "@/modules/game-modes/level-catalog"
-import { MAX_RECORDED_ACTIONS, type RecordedGameAction } from "@/modules/block-puzzle/engine/replay-recorded-game-actions"
-
-const boardIndex = z.number().int().min(-8).max(15)
-
-/** Toạ độ ngoài bàn để reducer tự từ chối; ở đây chỉ chặn kiểu dữ liệu và giá trị vô lý. */
-const recordedActionSchema: z.ZodType<RecordedGameAction> = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("PLACE_PIECE"),
-    slot: z.union([z.number().int().min(0).max(TRAY_SIZE - 1), z.literal(STASH_SLOT)]),
-    row: boardIndex,
-    col: boardIndex,
-  }),
-  z.object({ type: z.literal("STASH_PIECE"), slot: z.number().int().min(0).max(TRAY_SIZE - 1) }),
-  z.object({ type: z.literal("REPLACE_TRAY") }),
-  z.object({ type: z.literal("REVIVE") }),
-])
+import { recordedActionSchema } from "@/modules/block-puzzle/engine/recorded-action-schema"
+import { MAX_RECORDED_ACTIONS } from "@/modules/block-puzzle/engine/replay-recorded-game-actions"
 
 /** Firestore auto-ID: 20 ký tự chữ/số. */
 export const gameIdSchema = z.string().regex(/^[A-Za-z0-9]{20}$/)

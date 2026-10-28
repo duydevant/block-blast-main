@@ -17,8 +17,9 @@ const TILE =
 interface GameSettingsMenuProps {
   onShowHowToPlay: () => void
   onShowThemes: () => void
-  onRestart: () => void
-  onStartDaily: () => void
+  /** Không truyền = ẩn (đang đấu 1v1: không bỏ trận sang ván khác từ menu). */
+  onRestart?: () => void
+  onStartDaily?: () => void
 }
 
 /** Menu trong ván (nút ☰): bật/tắt âm thanh, rung; cách chơi, màu khối, thử thách ngày; ván mới. */
@@ -60,15 +61,19 @@ export function GameSettingsMenu({ onShowHowToPlay, onShowThemes, onRestart, onS
             <CircleHelpIcon aria-hidden="true" />
             {t("game.howToPlay")}
           </button>
-          <button className={TILE + " col-span-2"} onClick={then(onStartDaily)}>
-            <CalendarDaysIcon className="text-[#ff8a3d]" aria-hidden="true" />
-            {t("daily.title")}
-          </button>
+          {onStartDaily && (
+            <button className={TILE + " col-span-2"} onClick={then(onStartDaily)}>
+              <CalendarDaysIcon className="text-[#ff8a3d]" aria-hidden="true" />
+              {t("daily.title")}
+            </button>
+          )}
         </div>
-        <button className={`${CHUNKY_BUTTON.primary} mt-1 h-14 text-xl`} onClick={then(onRestart)}>
-          <RotateCcwIcon aria-hidden="true" />
-          {t("game.newGame")}
-        </button>
+        {onRestart && (
+          <button className={`${CHUNKY_BUTTON.primary} mt-1 h-14 text-xl`} onClick={then(onRestart)}>
+            <RotateCcwIcon aria-hidden="true" />
+            {t("game.newGame")}
+          </button>
+        )}
       </DialogContent>
     </Dialog>
   )

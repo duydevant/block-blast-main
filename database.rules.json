@@ -11,13 +11,30 @@
     "duels": {
       "$duelId": {
         ".read": "auth != null",
-        "live": {
+        "moves": {
+          "$round": {
+            "$uid": {
+              "$seq": {
+                ".write": "auth != null && auth.uid === $uid && !data.exists() && $seq.matches(/^[0-9]{4}$/) && root.child('duels').child($duelId).child('state/roundKey').val() === $round && root.child('duels').child($duelId).child('state/status').val() === 'playing' && (root.child('duels').child($duelId).child('state/host/uid').val() === auth.uid || root.child('duels').child($duelId).child('state/guest/uid').val() === auth.uid) && now >= root.child('duels').child($duelId).child('state/startAt').val() - 1500 && now <= root.child('duels').child($duelId).child('state/endsAt').val() + 3000",
+                ".validate": "newData.hasChildren(['a', 'at'])",
+                "at": { ".validate": "newData.isNumber() && newData.val() === now" },
+                "a": {
+                  ".validate": "newData.hasChild('type')",
+                  "type": { ".validate": "newData.isString() && newData.val().length <= 16" },
+                  "slot": { ".validate": "newData.isNumber()" },
+                  "row": { ".validate": "newData.isNumber()" },
+                  "col": { ".validate": "newData.isNumber()" },
+                  "$other": { ".validate": false }
+                },
+                "$other": { ".validate": false }
+              }
+            }
+          }
+        },
+        "online": {
           "$uid": {
-            ".write": "auth != null && auth.uid === $uid && (root.child('duels').child($duelId).child('state/host/uid').val() === auth.uid || root.child('duels').child($duelId).child('state/guest/uid').val() === auth.uid)",
-            ".validate": "newData.hasChildren(['score', 'over']) && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('over').isBoolean()",
-            "score": { ".validate": true },
-            "over": { ".validate": true },
-            "$other": { ".validate": false }
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.isNumber() && newData.val() === now"
           }
         }
       }

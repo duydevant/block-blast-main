@@ -59,11 +59,11 @@ export async function startDuelGame(duelId: string): Promise<void> {
   if (!uid) throw new Error("not-signed-in")
   const issued = await requestStart(uid, { mode: "duel", duelId })
   if (issued.mode !== "duel" || !issued.gameId || !issued.duel) throw new Error("unexpected-duel-start")
-  const { opponent, startAt, endsAt, serverNow } = issued.duel
+  const { opponent, round, startAt, endsAt, serverNow } = issued.duel
   useBlockPuzzleGameStore.getState().startVariantGame({
     gameId: issued.gameId,
     uid,
     seed: issued.seed,
-    run: { kind: "duel", duelId, opponent, startAt, endsAt, clockOffset: serverNow - Date.now() },
+    run: { kind: "duel", duelId, round, seed: issued.seed, opponent, startAt, endsAt, clockOffset: serverNow - Date.now() },
   })
 }

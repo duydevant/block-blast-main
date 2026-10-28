@@ -59,6 +59,12 @@ Plan: `plans/261027-1800-retention-acquisition-features-firebase/`
 - Tab "Hôm nay" = mọi ván tính điểm trong ngày (bảng `today-*`), tách khỏi bảng thử thách ngày; ván Vô tận tính cho sự kiện tuần. Đã ghi bù các ván tuần 2026-W44.
 - Nhận thưởng ngày theo chuỗi (/daily), mục tiêu + thưởng cho sự kiện tuần (/event), mã phòng 6 ký tự cho 1v1, hồ sơ: hàng nhập tên thẳng hàng + modal thành tích.
 
+## v2.3 — Đấu 1v1 thời gian thực (2026-10-28)
+
+- Khoá người chơi trong trận: bỏ hướng dẫn khi vào đấu, bảng điểm hai bên, cấm hồi sinh, chết → bảng "Trận đấu" (không ván mới), xác nhận khi bỏ trận; sửa lỗi ván đấu bị chốt "sống lại" khi tải lại save.
+- Nước đi lên RTDB kèm giờ server, server chấm từ nước đi: chốt ngay khi người còn sống vượt điểm người đã dừng; xem bàn đối thủ trực tiếp.
+- Phòng nhiều ván cùng mã (sẵn sàng → ván mới, tỉ số, lịch sử), người xem bằng link/mã, đếm người xem. Cần publish `database.rules.json` mới.
+
 ## Còn mở
 
 - QA trên điện thoại thật (Android Chrome, iOS Safari), cả dọc và ngang.

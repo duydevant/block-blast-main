@@ -8,7 +8,21 @@ import { findEventRule } from "./weekly-event-catalog"
 export type VariantRun =
   | { kind: "event"; week: string; ruleId: string }
   | { kind: "level"; levelId: number }
-  | { kind: "duel"; duelId: string; opponent: DuelPlayer; startAt: number; endsAt: number; clockOffset: number }
+  | {
+      kind: "duel"
+      duelId: string
+      /** Ván thứ mấy trong phòng (phòng đấu nhiều ván cùng mã). */
+      round: number
+      /** Seed ván (đối thủ/người xem replay nước đi từ seed này). */
+      seed: number
+      opponent: DuelPlayer
+      startAt: number
+      endsAt: number
+      clockOffset: number
+    }
+
+/** Đấu 1v1: bàn thường, không hồi sinh (chết là dừng, chờ kết quả). */
+export const DUEL_VARIANT: GameVariant = { noRevive: true }
 
 /** Biến thể ván theo chế độ; id lạ (save cũ/bị sửa) → undefined = ván thường. */
 export function variantForRun(run: { kind: "event"; ruleId: string } | { kind: "level"; levelId: number } | { kind: "duel" }): GameVariant | undefined {
@@ -17,5 +31,5 @@ export function variantForRun(run: { kind: "event"; ruleId: string } | { kind: "
     const definition = findLevel(run.levelId)
     return definition ? levelVariant(definition) : undefined
   }
-  return undefined
+  return DUEL_VARIANT
 }

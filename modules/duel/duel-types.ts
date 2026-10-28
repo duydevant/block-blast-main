@@ -1,4 +1,4 @@
-/** Kiểu + hằng số đấu 1v1 dùng chung client (phòng, HUD) và server (API, kết quả). */
+/** Kiểu + hằng số đấu 1v1 dùng chung client (phòng, HUD, người xem) và server (API, chấm ván). */
 
 /**
  * Mã phòng = id phòng: 6 ký tự in hoa không dễ nhầm (bảng chữ của mã mời) — vừa gõ tay được vừa nằm trong link.
@@ -13,15 +13,24 @@ export function normalizeDuelCode(raw: string): string | null {
   return code.length === DUEL_CODE_LENGTH && DUEL_ID_PATTERN.test(code) ? code : null
 }
 
-/** Mỗi trận 3 phút, đếm ngược 5 giây trước khi bắt đầu. */
+/** Mỗi ván 3 phút, đếm ngược 5 giây trước khi bắt đầu. */
 export const DUEL_DURATION_MS = 3 * 60_000
 export const DUEL_COUNTDOWN_MS = 5_000
-/** Ván nộp trễ quá hạn này (mạng chập chờn…) không được tính → coi như bỏ cuộc. */
-export const DUEL_SUBMIT_GRACE_MS = 60_000
-/** Phòng chờ quá lâu không ai vào thì hết hạn. */
-export const DUEL_WAITING_TTL_MS = 60 * 60_000
+/**
+ * Nước đi ghi lên RTDB trễ hơn hạn chót tối đa từng này vẫn được tính (độ trễ mạng). Rules RTDB
+ * (`database.rules.json`) dùng cùng con số — đổi thì sửa cả hai.
+ */
+export const DUEL_MOVE_GRACE_MS = 3_000
+/** Cho phép vào ván / ghi nước sớm hơn giờ bắt đầu một chút (lệch đồng hồ), không hơn — rules RTDB cùng số. */
+export const DUEL_EARLY_START_TOLERANCE_MS = 1_500
+/** Phòng không có hoạt động (chờ người vào / chờ đấu lại) quá lâu thì hết hạn. */
+export const DUEL_ROOM_IDLE_TTL_MS = 60 * 60_000
+/** Số ván gần nhất giữ trong lịch sử phòng. */
+export const DUEL_HISTORY_LIMIT = 20
 
 export type DuelStatus = "waiting" | "playing" | "finished" | "expired"
+/** Vì sao ván kết thúc: vượt điểm khi đối thủ đã hết nước / cả hai hết nước / hết giờ. */
+export type DuelEndReason = "clinched" | "both-over" | "time"
 
 export interface DuelPlayer {
   uid: string
@@ -29,46 +38,70 @@ export interface DuelPlayer {
   name: string | null
 }
 
+/** Kết quả một ván đã xong (lịch sử phòng). */
+export interface DuelRoundResult {
+  round: number
+  scores: Record<string, number>
+  winnerUid: string | null
+  endReason: DuelEndReason
+}
+
 /** Trạng thái phòng (server ghi, mirror lên RTDB `/duels/{id}/state` để client nghe realtime). */
 export interface DuelState {
   id: string
+  /** Tăng mỗi lần server ghi phòng: bản version cao hơn là bản mới hơn (RTDB và API có thể lệch nhau). */
+  version: number
+  /** Trạng thái của ván hiện tại (waiting = chưa có đối thủ). */
   status: DuelStatus
   host: DuelPlayer
   guest: DuelPlayer | null
+  /** Số thứ tự ván hiện tại, 0 = chưa đấu ván nào. */
+  round: number
+  /** Khoá ván trên RTDB: nước đi nằm ở `moves/{roundKey}/{uid}`. */
+  roundKey: string
+  /** Seed ván hiện tại (đã bắt đầu) — người xem replay nước đi từ seed này. */
+  seed: number | null
   /** Mốc thời gian theo đồng hồ server (ms). */
   startAt: number | null
   endsAt: number | null
-  /** Điểm đã được server replay của từng người (uid → điểm). */
+  /** Điểm chốt của ván hiện tại (server replay nước đi). */
   results: Record<string, number>
   /** null khi chưa xong hoặc hoà. */
   winnerUid: string | null
-  /** Trận đấu lại do một trong hai người tạo. */
-  rematchId: string | null
-  /** uid đã vào ván đấu (mỗi người chỉ một ván) — để phòng không đưa người đã chơi quay lại. */
+  endReason: DuelEndReason | null
+  /** Số ván thắng của mỗi người trong phòng. */
+  series: Record<string, number>
+  /** Người đã bấm "Sẵn sàng" cho ván tiếp theo. */
+  ready: string[]
+  /** Các ván đã xong, mới nhất cuối. */
+  history: DuelRoundResult[]
+  /** uid đã vào ván hiện tại (mỗi người một ván mỗi lượt). */
   started: string[]
 }
 
 /** Phản hồi API trận (khác bản RTDB): kèm giờ server để client tính lệch đồng hồ khi chưa có RTDB. */
 export type DuelStateResponse = DuelState & { serverNow: number }
 
-/** Cho phép vào ván sớm hơn giờ bắt đầu một chút (độ trễ mạng/đồng hồ), không hơn. */
-export const DUEL_EARLY_START_TOLERANCE_MS = 1_500
+export const duelRoundKey = (round: number) => `r${round}`
+/** Khoá nước đi thứ `index` (0-pad để RTDB sắp đúng thứ tự; tối đa 10.000 nước như log ván). */
+export const duelMoveKey = (index: number) => String(index).padStart(4, "0")
 
-/** Trạng thái "tiến xa" hơn thắng khi hai bản (RTDB / API, hoặc hai lần ghi) lệch nhau. */
-export function duelStateRank(state: Pick<DuelState, "status" | "results" | "started" | "rematchId">): number {
-  const status = state.status === "waiting" ? 0 : state.status === "playing" ? 1 : 2
-  return status * 1000 + Object.keys(state.results ?? {}).length * 100 + (state.started?.length ?? 0) * 10 + (state.rematchId ? 1 : 0)
+/** Một nước đi trên RTDB: action + giờ server lúc ghi (rules ép `at == now`). */
+export interface DuelMoveRecord {
+  a: unknown
+  at: number
 }
 
-/** Điểm trực tiếp mỗi người tự ghi lên RTDB `/duels/{id}/live/{uid}` (chỉ để hiển thị). */
-export interface DuelLiveScore {
-  score: number
-  over: boolean
+/** Bản nào mới hơn (version cao hơn) thì dùng — RTDB realtime nhưng mirror là best-effort; API là nguồn thật. */
+export function freshestDuelState(live: DuelState | null, fetched: DuelState | null): DuelState | null {
+  if (!live || !fetched) return live ?? fetched
+  return fetched.version > live.version ? fetched : live
 }
 
-/** Thông tin trận trả kèm khi xin session mode "duel". */
+/** Thông tin ván trả kèm khi xin session mode "duel". */
 export interface DuelStartInfo {
   id: string
+  round: number
   opponent: DuelPlayer
   startAt: number
   endsAt: number
@@ -82,9 +115,3 @@ export interface CreateDuelResponse {
 }
 
 export const DUEL_RTDB_PATH = "duels"
-
-/** Bản nào "tiến xa" hơn thì dùng (RTDB realtime nhưng mirror là best-effort; API là nguồn thật). */
-export function freshestDuelState(live: DuelState | null, fetched: DuelState | null): DuelState | null {
-  if (!live || !fetched) return live ?? fetched
-  return duelStateRank(fetched) > duelStateRank(live) ? fetched : live
-}

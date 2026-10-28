@@ -4,7 +4,7 @@ import { PartyPopperIcon, TargetIcon } from "lucide-react"
 
 import { type TranslationKey, useI18n } from "@/lib/i18n"
 import { useBlockPuzzleGameStore } from "@/modules/block-puzzle/store/block-puzzle-game-store"
-import { DuelHud } from "@/modules/duel/components/duel-hud"
+import { DuelOpponentStrip } from "@/modules/duel/components/duel-opponent-strip"
 
 import { findLevel, levelGoalProgress, type LevelDefinition } from "../level-catalog"
 
@@ -33,13 +33,13 @@ function LevelBadge({ definition }: { definition: LevelDefinition }) {
   )
 }
 
-/** Nhãn dưới HUD cho sự kiện tuần / màn chơi (tiến độ + số nước còn lại) / đấu 1v1 (đồng hồ + điểm đối thủ). */
+/** Nhãn dưới HUD: sự kiện tuần / màn chơi (tiến độ + số nước còn lại) / đấu 1v1 (bàn mini của đối thủ). */
 export function VariantModeBadge() {
   const { t } = useI18n()
   const run = useBlockPuzzleGameStore((state) => state.variantRun)
   if (!run) return null
+  if (run.kind === "duel") return <DuelOpponentStrip run={run} />
 
-  if (run.kind === "duel") return <DuelHud run={run} />
   if (run.kind === "level") {
     const definition = findLevel(run.levelId)
     return definition ? <LevelBadge definition={definition} /> : null

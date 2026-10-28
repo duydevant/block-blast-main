@@ -7,6 +7,8 @@ import { CrownIcon, HomeIcon } from "lucide-react"
 import { ICON_TILE } from "@/components/game-ui/game-ui-classes"
 import { useI18n } from "@/lib/i18n"
 import { Routes } from "@/lib/routes"
+import { DuelHud } from "@/modules/duel/components/duel-hud"
+import { DuelLeaveButton } from "@/modules/duel/components/duel-leave-button"
 
 import { useBlockPuzzleGameStore } from "../store/block-puzzle-game-store"
 import { GameSettingsMenu } from "./game-settings-menu"
@@ -19,20 +21,33 @@ interface GameHudScoreBarProps {
   onStartDaily: () => void
 }
 
-/** Thanh trên màn chơi: về nhà · kỷ lục (mở thống kê) + điểm thật to · menu. */
+/**
+ * Thanh trên màn chơi: về nhà · kỷ lục (mở thống kê) + điểm thật to · menu.
+ * Đấu 1v1: giữa là bảng điểm hai bên, Home hỏi trước khi bỏ trận, menu không có ván mới / chế độ khác.
+ */
 export function GameHudScoreBar({ onRestart, onShowHowToPlay, onStartDaily }: GameHudScoreBarProps) {
   const { t, formatNumber } = useI18n()
   const score = useBlockPuzzleGameStore((state) => state.game?.score ?? 0)
   const best = useBlockPuzzleGameStore((state) => state.best)
+  const duelRun = useBlockPuzzleGameStore((state) => (state.variantRun?.kind === "duel" ? state.variantRun : null))
+  const gameOver = useBlockPuzzleGameStore((state) => state.game?.isGameOver ?? false)
   const displayScore = useAnimatedNumber(score)
   const [popup, setPopup] = useState<"themes" | "stats" | null>(null)
+  const inDuel = duelRun !== null && !gameOver
 
   return (
-    <header className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center px-4 pt-3 pb-1">
-      <Link href={Routes.HOME} className={ICON_TILE} aria-label={t("ui.home")}>
-        <HomeIcon aria-hidden="true" />
-      </Link>
+    <header className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 px-4 pt-3 pb-1">
+      {inDuel ? (
+        <DuelLeaveButton duelId={duelRun.duelId} />
+      ) : (
+        <Link href={Routes.HOME} className={ICON_TILE} aria-label={t("ui.home")}>
+          <HomeIcon aria-hidden="true" />
+        </Link>
+      )}
 
+      {duelRun ? (
+        <DuelHud run={duelRun} />
+      ) : (
       <div className="flex flex-col items-center leading-none">
         <button
           className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[13px] font-bold text-[#ffcf7a] hover:bg-white/8"
@@ -49,12 +64,13 @@ export function GameHudScoreBar({ onRestart, onShowHowToPlay, onStartDaily }: Ga
           {t("game.score")}: {formatNumber(score)}
         </span>
       </div>
+      )}
 
       <GameSettingsMenu
         onShowHowToPlay={onShowHowToPlay}
         onShowThemes={() => setPopup("themes")}
-        onRestart={onRestart}
-        onStartDaily={onStartDaily}
+        onRestart={duelRun ? undefined : onRestart}
+        onStartDaily={duelRun ? undefined : onStartDaily}
       />
 
       <GameThemesDialog open={popup === "themes"} onClose={() => setPopup(null)} />

@@ -33,7 +33,7 @@ type SpecialMode =
   | { kind: "challenge"; id: string }
   | { kind: "event" }
   | { kind: "level"; id: number }
-  | { kind: "duel"; id: string }
+  | { kind: "duel"; id: string; round: number | null }
 
 const COPY: Record<SpecialMode["kind"], { title: TranslationKey; confirm: TranslationKey; offline: TranslationKey; failed: TranslationKey }> = {
   daily: { title: "daily.confirmTitle", confirm: "daily.play", offline: "daily.needsOnline", failed: "daily.startFailed" },
@@ -49,17 +49,18 @@ function modeFromQuery(): SpecialMode | null {
   const challengeId = params.get("challenge")
   if (challengeId && CHALLENGE_ID_PATTERN.test(challengeId)) return { kind: "challenge", id: challengeId }
   const duelId = params.get("duel")
-  if (duelId && DUEL_ID_PATTERN.test(duelId)) return { kind: "duel", id: duelId }
+  const round = Number(params.get("round"))
+  if (duelId && DUEL_ID_PATTERN.test(duelId)) return { kind: "duel", id: duelId, round: Number.isInteger(round) && round > 0 ? round : null }
   const levelId = Number(params.get("level"))
   if (findLevel(levelId)) return { kind: "level", id: levelId }
   if (params.has("event")) return { kind: "event" }
   return params.has("daily") ? { kind: "daily" } : null
 }
 
-/** Đang chơi đúng trận đấu này rồi (mở lại link sau khi tải lại trang) → không xin ván mới. */
+/** Đang chơi đúng ván đấu này rồi (mở lại link sau khi tải lại trang) → không xin ván mới; ván mới cùng phòng thì có. */
 function isCurrentDuel(mode: SpecialMode): boolean {
   const run = useBlockPuzzleGameStore.getState().variantRun
-  return mode.kind === "duel" && run?.kind === "duel" && run.duelId === mode.id
+  return mode.kind === "duel" && run?.kind === "duel" && run.duelId === mode.id && (mode.round === null || run.round === mode.round)
 }
 
 async function startMode(mode: SpecialMode): Promise<"practice" | void> {
@@ -80,6 +81,8 @@ export function useSpecialModeLauncher() {
   const busy = useRef(false)
   const authStatus = useFirebaseAuthStore((state) => state.status)
   const gameReady = useBlockPuzzleGameStore((state) => state.hasHydrated && state.game !== null)
+  // Đang giữa trận đấu: chuyển chế độ khác = bỏ trận (ván đấu được nộp với điểm hiện tại) → nói rõ khi hỏi.
+  const duelActive = useBlockPuzzleGameStore((state) => state.variantRun?.kind === "duel" && state.game?.isGameOver === false)
 
   const begin = useCallback(async (mode: SpecialMode) => {
     if (busy.current) return
@@ -101,7 +104,9 @@ export function useSpecialModeLauncher() {
     const { game, variantRun } = useBlockPuzzleGameStore.getState()
     const initialCharges = variantRun ? variantForRun(variantRun)?.replaceCharges : undefined
     // Đấu 1v1 có giờ bắt đầu cố định → không hỏi lại, vào ngay.
-    if (mode.kind !== "duel" && game && !game.isGameOver && !isUntouchedGame(game, initialCharges)) return setPending(mode)
+    // Đang đấu thì luôn hỏi (kể cả chưa đi nước nào): rời ván = bỏ trận.
+    const touched = variantRun?.kind === "duel" || !isUntouchedGame(game, initialCharges)
+    if (mode.kind !== "duel" && game && !game.isGameOver && touched) return setPending(mode)
     void begin(mode)
   }, [begin, t])
 
@@ -125,11 +130,18 @@ export function useSpecialModeLauncher() {
       <AlertDialogContent className={GAME_PANEL}>
         <AlertDialogHeader>
           <AlertDialogTitle>{pending && t(COPY[pending.kind].title)}</AlertDialogTitle>
-          <AlertDialogDescription>{t("daily.confirmDescription")}</AlertDialogDescription>
+          <AlertDialogDescription>{t(duelActive ? "duel.switchDescription" : "daily.confirmDescription")}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel className={SECONDARY_BUTTON}>{t("game.cancel")}</AlertDialogCancel>
-          <AlertDialogAction className={PRIMARY_BUTTON} onClick={() => pending && void begin(pending)}>
+          <AlertDialogAction
+            className={PRIMARY_BUTTON}
+            onClick={() => {
+              if (!pending) return
+              if (duelActive) useBlockPuzzleGameStore.getState().endVariantRun()
+              void begin(pending)
+            }}
+          >
             {pending && t(COPY[pending.kind].confirm)}
           </AlertDialogAction>
         </AlertDialogFooter>

@@ -9,6 +9,8 @@ import { PLAYER_PROFILE_QUERY_KEY } from "@/modules/player-profile/use-player-pr
 import { VariantModeBadge } from "@/modules/game-modes/components/variant-mode-badge"
 import { useLevelProgressStore } from "@/modules/game-modes/level-progress-store"
 import { useLevelRunEffects } from "@/modules/game-modes/use-level-run-effects"
+import { DuelGameOverPanel } from "@/modules/duel/components/duel-game-over-panel"
+import { DuelRunController } from "@/modules/duel/components/duel-run-controller"
 import { usePlayerPresence } from "@/modules/presence/use-player-presence"
 import { useLastGameRewardsStore } from "@/modules/progression/last-game-rewards-store"
 
@@ -35,6 +37,10 @@ export function BlockPuzzleGameScreen() {
   const finishTutorial = useBlockPuzzleGameStore((state) => state.finishTutorial)
   const [restartOpen, setRestartOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const duelRun = useBlockPuzzleGameStore((state) => (state.variantRun?.kind === "duel" ? state.variantRun : null))
+  // Vào bằng link đấu (?duel=…): ván chưa kịp cấp nhưng đã biết là trận đấu → không hiện hướng dẫn chen vào.
+  const [openedForDuel] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("duel"))
+  const skipTutorial = openedForDuel || duelRun !== null
 
   // Đọc localStorage sau khi mount (store dùng skipHydration) để HTML server/client khớp nhau.
   useEffect(() => {
@@ -57,6 +63,10 @@ export function BlockPuzzleGameScreen() {
       }),
     [queryClient, showRewards]
   )
+  // Vào đấu 1v1 coi như đã biết chơi: bỏ hướng dẫn (đồng hồ trận vẫn chạy) và không hiện lại sau này.
+  useEffect(() => {
+    if (settingsReady && skipTutorial && !seenTutorial) markTutorialSeen()
+  }, [settingsReady, skipTutorial, seenTutorial, markTutorialSeen])
   useEnforceOwnedColorTheme()
   usePlayerPresence()
   useLevelRunEffects()
@@ -72,7 +82,7 @@ export function BlockPuzzleGameScreen() {
 
   return (
     <div className="relative mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col">
-      {!seenTutorial ? <GameTutorial onComplete={() => { finishTutorial(); markTutorialSeen() }} /> : <>
+      {!seenTutorial && !skipTutorial ? <GameTutorial onComplete={() => { finishTutorial(); markTutorialSeen() }} /> : <>
         <GameHudScoreBar
           onRestart={() => setRestartOpen(true)}
           onShowHowToPlay={() => setHelpOpen(true)}
@@ -82,7 +92,8 @@ export function BlockPuzzleGameScreen() {
         <VariantModeBadge />
         <GameDragHint />
         <BlockPuzzleGameCanvas />
-        <GameOverDialog />
+        {duelRun ? <DuelGameOverPanel run={duelRun} /> : <GameOverDialog />}
+        {duelRun && <DuelRunController key={`${duelRun.duelId}:${duelRun.round}`} run={duelRun} />}
       </>}
       <RestartConfirmDialog open={restartOpen} onOpenChange={setRestartOpen} />
       {modeLauncher.confirmDialog}
