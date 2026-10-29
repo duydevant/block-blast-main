@@ -1,10 +1,17 @@
 import { BLOCK_THEMES, BOARD_COLORS, blockColor, DEFAULT_BLOCK_THEME, type BlockThemeId } from "./block-color-palette"
+import { drawColorblindGlyph } from "./colorblind-glyphs"
 
 /** Khối vẽ hoàn toàn bằng code (không sprite) theo theme đang chọn. */
 let activeTheme: BlockThemeId = DEFAULT_BLOCK_THEME
+/** Vẽ thêm ký hiệu theo màu (cài đặt mù màu). */
+let colorblindMarks = false
 
 export function setBlockTheme(theme: BlockThemeId) {
   activeTheme = theme in BLOCK_THEMES ? theme : DEFAULT_BLOCK_THEME
+}
+
+export function setColorblindMarks(enabled: boolean) {
+  colorblindMarks = enabled
 }
 
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
@@ -60,6 +67,12 @@ function paintBlock(ctx: Ctx2D, x: number, y: number, size: number, colorId: num
     ctx.fill()
   }
   ctx.restore()
+  if (colorblindMarks) {
+    ctx.save()
+    ctx.globalAlpha *= alpha
+    drawColorblindGlyph(ctx, left, top, s, colorId)
+    ctx.restore()
+  }
 }
 
 /** Ảnh khối đã dựng sẵn theo (theme, màu, cỡ px thiết bị) — vẽ lại mỗi frame chỉ còn drawImage. */
@@ -77,7 +90,7 @@ function createScratchCanvas(size: number): HTMLCanvasElement | OffscreenCanvas 
 }
 
 function cachedBlockImage(colorId: number, devicePixels: number) {
-  const key = `${activeTheme}|${colorId}|${devicePixels}`
+  const key = `${activeTheme}|${colorblindMarks ? "m" : ""}|${colorId}|${devicePixels}`
   let entry = blockImageCache.get(key)
   if (!entry) {
     // Chừa lề cho quầng sáng của theme neon.

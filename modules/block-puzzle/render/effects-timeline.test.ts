@@ -32,6 +32,12 @@ describe("createMoveEffects", () => {
     expect(reduced[0].duration).toBeLessThan(normal[0].duration)
   })
 
+  it("keeps the clear effect at or under 150ms under reduced motion", () => {
+    const reduced = createMoveEffects(clearMove, new Array(64).fill(1), 0, texts, true)
+    const clear = reduced.find((e) => e.kind === "clear")
+    expect(clear?.duration).toBeLessThanOrEqual(150)
+  })
+
   it("only flashes and shows points when nothing clears", () => {
     const move = { ...clearMove, clearedRows: [], clearedCells: [], combo: 0 }
     const effects = createMoveEffects(move, new Array(64).fill(0), 0, { ...texts, combo: null }, false)

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useI18n } from "@/lib/i18n"
 
 import { useBlockPuzzleSettingsStore } from "../store/block-puzzle-settings-store"
+import { GameDisplaySettingsSection } from "./game-display-settings-section"
 import { GAME_PANEL } from "./game-ui-styles"
 
 /** Ô vuông có icon + 1-2 chữ (menu dạng lưới, ít chữ). */
@@ -22,7 +23,7 @@ interface GameSettingsMenuProps {
   onStartDaily?: () => void
 }
 
-/** Menu trong ván (nút ☰): bật/tắt âm thanh, rung; cách chơi, màu khối, thử thách ngày; ván mới. */
+/** Menu trong ván (nút ☰): bật/tắt âm thanh, rung; cách chơi, màu khối, thử thách ngày; điều khiển & hiển thị; ván mới. */
 export function GameSettingsMenu({ onShowHowToPlay, onShowThemes, onRestart, onStartDaily }: GameSettingsMenuProps) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
@@ -40,7 +41,7 @@ export function GameSettingsMenu({ onShowHowToPlay, onShowThemes, onRestart, onS
       <DialogTrigger render={<button className={ICON_TILE} aria-label={t("ui.menu")} />}>
         <MenuIcon />
       </DialogTrigger>
-      <DialogContent className={GAME_PANEL + " max-w-sm gap-3"}>
+      <DialogContent className={GAME_PANEL + " max-h-[90dvh] max-w-sm gap-3 overflow-y-auto"}>
         <DialogHeader>
           <DialogTitle className="text-center font-heading text-2xl font-extrabold">{t("ui.menu")}</DialogTitle>
         </DialogHeader>
@@ -68,6 +69,7 @@ export function GameSettingsMenu({ onShowHowToPlay, onShowThemes, onRestart, onS
             </button>
           )}
         </div>
+        <GameDisplaySettingsSection />
         {onRestart && (
           <button className={`${CHUNKY_BUTTON.primary} mt-1 h-14 text-xl`} onClick={then(onRestart)}>
             <RotateCcwIcon aria-hidden="true" />

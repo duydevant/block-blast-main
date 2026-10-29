@@ -2,9 +2,9 @@ import "server-only"
 
 import type { DailyStatusResponse } from "@/modules/player-profile/player-profile-types"
 import { DAILY_RUNS_PER_DAY } from "@/modules/progression/daily-challenge-goals"
-import { dailyMissionProgressSchema, dailyMissionStatuses, dailyMissionsForDay } from "@/modules/progression/daily-mission-catalog"
 import { dailyRewardCoins, dailyRewardDay } from "@/modules/progression/daily-reward-track"
 import { getAdminFirestore } from "@/server/firebase/firebase-admin-app"
+import { missionBandFor, missionStatusesFor, parseMissionDay } from "@/server/progression/mission-day-documents"
 import { MISSIONS_SUBCOLLECTION, parseStoredPlayer, USERS_COLLECTION } from "@/server/profile/stored-player-document"
 
 import { effectiveDailyStreak } from "./advance-daily-streak"
@@ -25,6 +25,7 @@ export async function getDailyStatus(uid: string): Promise<DailyStatusResponse> 
   const stored = parseStoredPlayer(userSnap.data())
   const today = parseDailyDay(todaySnap.data())
   const yesterday = parseDailyDay(yesterdaySnap.data())
+  const missionDay = parseMissionDay(missionsSnap.data())
   // Chưa bắt đầu lượt đầu → mốc dự kiến (lượt đầu sẽ chốt đúng mốc này nếu không có gì thay đổi).
   const goals = today.goals ?? (await computeDailyGoals(db, uid, day, stored)).goals
 
@@ -53,6 +54,7 @@ export async function getDailyStatus(uid: string): Promise<DailyStatusResponse> 
       claimable: (todayDone && !claimed) || (!todayDone && yesterdayPending),
       claimed,
     },
-    missions: dailyMissionStatuses(dailyMissionsForDay(day), dailyMissionProgressSchema.parse(missionsSnap.get("progress"))),
+    missions: missionStatusesFor(day, missionDay, missionBandFor(missionDay, stored)),
+    missionReplaceAvailable: missionDay.replacedSlot === null,
   }
 }

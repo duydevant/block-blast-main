@@ -75,13 +75,24 @@ Plan: `plans/261027-1800-retention-acquisition-features-firebase/`
 - Thử thách ngày: 3 lượt/ngày (lấy cao nhất), mốc ★/★★/★★★ theo phong độ của chính người chơi (trung vị 7 ngày) + mốc phá kỷ lục, xu cộng ngay khi đạt; HUD hiện lượt + mốc kế tiếp.
 - Thử thách tuần thay sự kiện tuần: bảng tổng điểm 7 ngày (tab "Thử thách"), rương sao 10★/18★, thưởng hạng nhận thứ Hai. Bỏ chế độ Sự kiện tuần; Vô tận chỉ tính Hôm nay / Tuần / Mọi lúc.
 
+## v2.6 — Chiều sâu kỹ năng, Phase 01 học từ Minesweeper Online (2026-10-29)
+
+Plan: `plans/261029-2025-ap-dung-minesweeper-online-vao-block-blast/` (phase 01 xong, 02–04 chờ)
+
+- Chỉ số ván trong reducer (điểm/nước, xoá ≥3 dòng, ván thuần…) hiện ở hộp hết ván; thống kê người chơi + theo chế độ.
+- Phong độ (trung vị 20 ván) → Bậc kỹ năng có thưởng lần đầu; huy hiệu ở hồ sơ, BXH, hộp hết ván.
+- Lịch sử ván `/profile/games` (lọc chế độ, biểu đồ điểm), bộ đếm năm.
+- Nhiệm vụ 12 loại, mức theo Bậc, đổi 1 nhiệm vụ/ngày; 11 thành tích mới, nhóm theo chủ đề.
+- Cài đặt nâng khối, mù màu, giảm chuyển động, tắt tô dòng; chơi bằng bàn phím.
+- Cần làm ở host: TTL `games.expireAt`, deploy `firestore.indexes.json`.
+
 ## Còn mở
 
 - QA trên điện thoại thật (Android Chrome, iOS Safari), cả dọc và ngang.
 - Playtest để cân chỉnh điểm/độ khó (`engine/tray-generator-config.ts`, `engine/score-and-combo-rules.ts`), dùng `npm run balance` để so trước/sau. Đổi catalog khối → tăng `SAVE_VERSION`.
 - Chốt tên game + bộ nhận diện (env `NEXT_PUBLIC_SITE_NAME`).
 - Kiểm tra âm thanh trên iOS Safari (unlock audio đã gọi ở pointerdown/pointerup/keydown).
-- Chơi bằng bàn phím (WCAG 2.1.1) — hiện chỉ hỗ trợ chuột/cảm ứng.
+- Chỉnh ngưỡng Bậc + band nhiệm vụ theo phân phối điểm thật sau ~2 tuần (`player-form-rules.ts`, `daily-mission-catalog.ts`).
 - Nhỏ: "Kỷ lục mới" hiện cả khi bằng kỷ lục cũ; 2 tab cùng mở ghi đè save của nhau; canvas mờ khi kéo cửa sổ sang màn hình khác DPR.
 
 ## Follow-up (chưa lên kế hoạch)

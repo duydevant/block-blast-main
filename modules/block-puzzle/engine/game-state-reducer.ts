@@ -3,6 +3,7 @@ import { STASH_SLOT, type BoardCells, type GameAction, type GameState, type Game
 import { hasAnyMove } from "./move-availability"
 import { findShape } from "./piece-shape-catalog"
 import { dealOpeningTray } from "./opening-tray-generator"
+import { accumulateRunStats, EMPTY_RUN_STATS } from "./game-run-stats"
 import { dealTray } from "./piece-tray-generator"
 import { isStashUnlocked, POWER_UP_RULES, replaceTray, revive, stashPiece } from "./power-up-rules"
 import { nextComboState, scoreForMove } from "./score-and-combo-rules"
@@ -45,6 +46,7 @@ export function createNewGame(seed: number, variant: GameVariant = {}): GameStat
     ...(variant.noPowerUps ? { noPowerUps: true } : {}),
     ...(variant.moveLimit !== undefined ? { moveLimit: variant.moveLimit } : {}),
     linesCleared: 0,
+    runStats: EMPTY_RUN_STATS,
     lastMove: null,
   }
 }
@@ -122,8 +124,7 @@ export function normalizeRestoredState(state: GameState): GameState {
     stashUnlocked: isStashUnlocked(state), isGameOver: computeGameOver(state, board, tray, state.stash) }
 }
 
-/** Reducer thuần: nước đi không hợp lệ trả lại đúng tham chiếu state cũ. */
-export function gameReducer(state: GameState, action: GameAction): GameState {
+function applyAction(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "NEW_GAME":
       return createNewGame(action.seed)
@@ -143,4 +144,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return state
     }
   }
+}
+
+/** Reducer thuần: nước đi không hợp lệ trả lại đúng tham chiếu state cũ; nước hợp lệ cộng vào chỉ số ván. */
+export function gameReducer(state: GameState, action: GameAction): GameState {
+  const next = applyAction(state, action)
+  if (next === state || action.type === "NEW_GAME" || action.type === "RESTORE") return next
+  return { ...next, runStats: accumulateRunStats(state.runStats ?? EMPTY_RUN_STATS, action, next) }
 }

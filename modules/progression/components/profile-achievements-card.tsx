@@ -9,13 +9,24 @@ import { type TranslationKey, useI18n } from "@/lib/i18n"
 import type { PlayerProfile } from "@/modules/player-profile/player-profile-types"
 import { usePlayerProfileQuery } from "@/modules/player-profile/use-player-profile-query"
 
-import { type Achievement, type AchievementState, ACHIEVEMENTS } from "../achievement-catalog"
+import { type Achievement, ACHIEVEMENT_CATEGORIES, type AchievementState, ACHIEVEMENTS, totalLevelStars } from "../achievement-catalog"
 import { levelForXp } from "../player-level-curve"
 
 const UNLOCKED_COLORS = ["bg-[#ffb547]", "bg-[#2ec4b6]", "bg-[#4ea8ff]", "bg-[#ff7eb6]", "bg-[#c86bfa]", "bg-[#9ad94a]"]
 
+/** Tiến độ hiển thị; "Marathon" đếm trong ngày nên hồ sơ không có (hiện 0 tới khi đạt). */
 function achievementState(profile: PlayerProfile): AchievementState {
-  return { stats: profile.stats, bestStreak: profile.streak.best, level: levelForXp(profile.xp), referralCount: profile.referralCount }
+  return {
+    stats: profile.stats,
+    bestStreak: profile.streak.best,
+    level: levelForXp(profile.xp),
+    referralCount: profile.referralCount,
+    levelStarsTotal: totalLevelStars(profile.levelStars),
+    duelWins: profile.duelStats.won,
+    highestTier: profile.highestTier,
+    todayGames1000: 0,
+    dailyThreeStarDays: profile.dailyThreeStarDays,
+  }
 }
 
 /** Modal một thành tích: icon to, tên, điều kiện, tiến độ hiện tại, thưởng, đã đạt hay chưa. */
@@ -74,22 +85,28 @@ export function ProfileAchievementsCard() {
           {owned.size}/{ACHIEVEMENTS.length}
         </span>
       </span>
-      <ul className="grid grid-cols-6 gap-2">
-        {ACHIEVEMENTS.map((item, index) => {
-          const unlocked = owned.has(item.id)
-          return (
-            <li key={item.id}>
-              <button
-                aria-label={t(`achievement.${item.id}` as TranslationKey)}
-                onClick={() => setOpenId(item.id)}
-                className={`flex aspect-square w-full items-center justify-center rounded-2xl transition hover:scale-105 ${unlocked ? `${UNLOCKED_COLORS[index % UNLOCKED_COLORS.length]} text-[#120f29]` : "bg-card text-[#4a4380]"}`}
-              >
-                <TrophyIcon className="size-5" aria-hidden="true" />
-              </button>
-            </li>
-          )
-        })}
-      </ul>
+      {ACHIEVEMENT_CATEGORIES.map((category) => (
+        <div key={category} className="flex flex-col gap-1.5">
+          <h3 className="text-[12px] font-bold text-muted-foreground">{t(`achievements.category.${category}`)}</h3>
+          <ul className="grid grid-cols-6 gap-2">
+            {ACHIEVEMENTS.map((item, index) => {
+              if (item.category !== category) return null
+              const unlocked = owned.has(item.id)
+              return (
+                <li key={item.id}>
+                  <button
+                    aria-label={t(`achievement.${item.id}` as TranslationKey)}
+                    onClick={() => setOpenId(item.id)}
+                    className={`flex aspect-square w-full items-center justify-center rounded-2xl transition hover:scale-105 ${unlocked ? `${UNLOCKED_COLORS[index % UNLOCKED_COLORS.length]} text-[#120f29]` : "bg-card text-[#4a4380]"}`}
+                  >
+                    <TrophyIcon className="size-5" aria-hidden="true" />
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      ))}
       {openIndex >= 0 && (
         <AchievementDialog
           item={ACHIEVEMENTS[openIndex]}

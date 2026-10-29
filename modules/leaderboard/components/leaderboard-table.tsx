@@ -7,6 +7,7 @@ import { Routes } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { guestTagFromUid } from "@/modules/player-profile/player-profile-types"
 import { useSignedInUid } from "@/modules/player-profile/use-player-profile-query"
+import { PlayerTierBadge } from "@/modules/progression/components/player-tier-badge"
 
 import type { LeaderboardPeriod, LeaderboardRow } from "../leaderboard-types"
 import { useLeaderboardQuery } from "../use-leaderboard-queries"
@@ -50,7 +51,10 @@ export function LeaderboardTable({ period, initialTop }: { period: LeaderboardPe
               <span className={cn("flex items-center justify-center rounded-full font-heading text-2xl font-extrabold text-[#04211e] uppercase", avatar)} aria-hidden="true">
                 {nameOf(row).charAt(0)}
               </span>
-              <span className={cn("max-w-full truncate text-[13px] font-bold", row.uid === uid && "text-[#2ec4b6]")}>{nameOf(row)}</span>
+              <span className={cn("flex max-w-full items-center gap-1 text-[13px] font-bold", row.uid === uid && "text-[#2ec4b6]")}>
+                <span className="truncate">{nameOf(row)}</span>
+                {row.tier && <PlayerTierBadge tier={row.tier} compact />}
+              </span>
               <div className={cn("flex w-full flex-col items-center justify-center gap-0.5 rounded-t-2xl rounded-b-md bg-[#14403b]", height)}>
                 <span className="font-heading text-[26px] leading-none font-extrabold">{rankOf(place - 1)}</span>
                 <span className="text-sm font-extrabold tabular-nums">{formatNumber(row.score)}</span>
@@ -68,9 +72,10 @@ export function LeaderboardTable({ period, initialTop }: { period: LeaderboardPe
             return (
               <li key={row.uid} className={cn("flex items-center gap-3 border-b border-[#184a44] py-2.5 last:border-0", isMe && "font-extrabold text-[#2ec4b6]")}>
                 <span className="w-7 font-extrabold text-[#9fe3db] tabular-nums">{index > 0 && top[index - 1].score === row.score ? "" : rankOf(index)}</span>
-                <span className="min-w-0 flex-1 truncate font-semibold">
-                  {nameOf(row)}
-                  {isMe && <span className="ml-1.5 text-xs">({t("leaderboard.you")})</span>}
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 font-semibold">
+                  <span className="truncate">{nameOf(row)}</span>
+                  {row.tier && <PlayerTierBadge tier={row.tier} compact />}
+                  {isMe && <span className="shrink-0 text-xs">({t("leaderboard.you")})</span>}
                 </span>
                 <span className="font-extrabold tabular-nums">{formatNumber(row.score)}</span>
               </li>

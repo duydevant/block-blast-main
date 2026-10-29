@@ -68,6 +68,12 @@ Rules hiện chặn mọi truy cập trực tiếp từ client — app đi qua A
 
 Firestore → **TTL** (tab bên trái của Firestore Database) → **Create policy** → Collection group `gameSessions`, Timestamp field `expireAt` → Create. Session không nộp sẽ tự xoá sau 30 ngày (không tốn phí ghi).
 
+Làm thêm 1 policy cho lịch sử ván: Collection group `games` (users/{uid}/games), field `expireAt` → lịch sử tự xoá sau 180 ngày.
+
+### Index lịch sử ván
+
+Lọc lịch sử theo chế độ (`/profile/games`) cần index ghép trong `firestore.indexes.json` (`games`: mode ASC, finishedAt DESC, __name__ DESC): `firebase deploy --only firestore:indexes`. Thiếu index thì lọc theo chế độ trả lỗi, tab "Tất cả" vẫn chạy.
+
 ## 8. Biến môi trường
 
 Thêm vào `.env.local` (mẫu cũng có trong `.env.example`):

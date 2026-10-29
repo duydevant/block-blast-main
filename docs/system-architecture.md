@@ -18,7 +18,7 @@ providers/     — React Query, Firebase Auth và các provider gốc.
 | Dịch vụ | Dùng cho |
 |---|---|
 | Auth | Khách ẩn danh tự tạo khi vào app; liên kết Google giữ nguyên uid |
-| Firestore | `challenges/{id}` (+ `results/{uid}`), `users/{uid}` (tên, `stashUnlocked`, `stats`, `streak`, `xp`, `coins`, `unlockedThemes`, `achievements`, mời bạn), `users/{uid}/daily/{YYYYMMDD}` (lượt tính điểm daily), `users/{uid}/missions/{YYYYMMDD}` (tiến độ nhiệm vụ ngày), `referralCodes/{code}` (→ uid người mời), `duels/{code}` (phòng 1v1 nhiều ván: chủ/khách, `round` + seed + giờ server của ván hiện tại, `sessions`, điểm chốt, người thắng, `series`, `ready`, `history`, `version`), `pushSubscriptions/{sha256(endpoint)}` (đăng ký nhắc nhở: uid, keys, locale, ngày gửi gần nhất), `gameSessions/{gameId}` (seed, `mode`, `day`, trạng thái, TTL `expireAt`), `leaderboards/{boardId}` (snapshot top 100) + `leaderboards/{boardId}/entries/{uid}` (điểm tốt nhất) |
+| Firestore | `challenges/{id}` (+ `results/{uid}`), `users/{uid}` (tên, `stashUnlocked`, `stats`, `statsByMode`, `streak`, `xp`, `coins`, `unlockedThemes`, `achievements`, mời bạn, `recentFormScores`, `tierRewardsClaimed`, `dailyThreeStarDays`), `users/{uid}/daily/{YYYYMMDD}` (lượt tính điểm daily), `users/{uid}/missions/{YYYYMMDD}` (tiến độ nhiệm vụ ngày + `band`, `replacedSlot`, `gamesToday`, `games1000`), `users/{uid}/games/{gameId}` (lịch sử ván, TTL 180 ngày), `users/{uid}/years/{YYYY}` (bộ đếm cả năm cho tổng kết năm), `referralCodes/{code}` (→ uid người mời), `duels/{code}` (phòng 1v1 nhiều ván: chủ/khách, `round` + seed + giờ server của ván hiện tại, `sessions`, điểm chốt, người thắng, `series`, `ready`, `history`, `version`), `pushSubscriptions/{sha256(endpoint)}` (đăng ký nhắc nhở: uid, keys, locale, ngày gửi gần nhất), `gameSessions/{gameId}` (seed, `mode`, `day`, trạng thái, TTL `expireAt`), `leaderboards/{boardId}` (snapshot top 100) + `leaderboards/{boardId}/entries/{uid}` (điểm tốt nhất) |
 | Realtime Database | `/presence/{uid}` = timestamp khi đang ở màn chơi (chỉ chính chủ ghi, không ai đọc từ client); `/duels/{code}/state` (server ghi, có `version` chống ghi lùi; ai đăng nhập + biết mã đọc được) + `/duels/{code}/moves/{roundKey}/{uid}/{seq}` = `{a, at}` (từng nước đi; chỉ chính chủ là người chơi ghi, append-only, `at == now`, trong giờ ván) + `/duels/{code}/online/{uid}` (ai đang mở phòng / ván) |
 
 - Client **không** đọc/ghi Firestore trực tiếp: `firestore.rules` và `database.rules.json` chặn hết. Mọi truy cập qua API route dùng Admin SDK (`server/firebase/firebase-admin-app.ts`).
@@ -32,7 +32,8 @@ providers/     — React Query, Firebase Auth và các provider gốc.
   - `GET /api/referral` → `{ code, referralCount }` (tạo mã lần đầu); `POST /api/referral/claim { code }` → gắn người mời.
   - `POST /api/challenges { gameId, actions? }` → `{ challengeId }`; `GET /api/challenges/{id}` (công khai).
   - `GET /api/leaderboards/{today|weekly|challenge|alltime|daily}` → bảng hiện hành `{ boardId, top, me: { rank, score, nextScore } }`.
-  - `GET/PATCH /api/profile` → profile (kèm `streak`); PATCH chỉ đổi `displayName` (2–16 ký tự), cập nhật tên trên các bảng hiện hành.
+  - `GET /api/games/history?mode=&cursor=` → `{ items, nextCursor }` (30 ván/trang, mới nhất trước); `POST /api/missions/replace { slot }` → đổi 1 nhiệm vụ hôm nay (1 lần/ngày, nhiệm vụ đã xong thì không đổi).
+  - `GET/PATCH /api/profile` → profile (kèm `streak`, `form`, `tier`, `highestTier`, `statsByMode`); PATCH chỉ đổi `displayName` (2–16 ký tự), cập nhật tên trên các bảng hiện hành.
 - Thiếu env Firebase → `status: "disabled"`, game chạy offline như cũ.
 
 ### Thử thách hằng ngày + bảng xếp hạng
@@ -61,7 +62,11 @@ providers/     — React Query, Firebase Auth và các provider gốc.
 - Luật thuần ở `modules/progression/` (dùng chung client/server); tính thưởng ở `server/progression/apply-progression-for-verified-game.ts`, gọi trong transaction nộp ván → response `rewards` (client hiện toast).
 - XP mỗi ván = 10 + ⌊điểm/100⌋ (tối đa 100); cấp L cần tổng 50·L·(L−1) XP; lên cấp +50 xu. Ván < 10 nước không có 10 XP cơ bản, không tính nhiệm vụ "chơi N ván" và mời bạn (chặn farm bằng ván 1 nước).
 - Nhiệm vụ ngày: 3 loại khác nhau chọn tất định theo ngày (giờ VN) → không lưu danh sách, chỉ lưu tiến độ; tính theo **ngày nộp**. Xong là tự cộng xu + XP. Không dùng doc `daily/{day}` vì doc đó bị xoá khi nhả lượt daily.
-- Thành tích suy từ stats/streak/cấp/số bạn mời; chỉ lưu id đã nhận thưởng.
+- Thành tích suy từ stats/streak/cấp/số bạn mời/sao màn/Bậc/thắng 1v1…; chỉ lưu id đã nhận thưởng. Nhóm hiển thị: chăm chỉ / kỹ năng / phong cách / bạn bè.
+- **Chỉ số ván** (`engine/game-run-stats.ts`): reducer cộng `GameState.runStats` sau mỗi nước hợp lệ (nước xoá dòng, xoá ≥2/3/4 dòng, max dòng 1 nước, combo, dọn bàn, số lần Cất/Đổi/Hồi sinh) → client và server replay ra cùng số. "Ván thuần" = không dùng trợ giúp (≥10 nước). Không ảnh hưởng luật/điểm.
+- **Phong độ & Bậc** (`modules/progression/player-form-rules.ts`): phong độ = trung vị 20 ván gần nhất trong tập Vô tận + lượt đầu daily (mọi ván ≥1 nước đều tính — không né ván xấu được); ≥10 ván mới xếp Bậc Đồng/Bạc/Vàng/Bạch kim/Kim cương/Cao thủ (ngưỡng tạm 0/800/1.500/3.000/6.000/12.000). Lần đầu đạt mỗi Bậc +xu. Bậc ghi kèm hàng BXH.
+- **Nhiệm vụ ngày**: 12 loại (thêm ván thuần, xoá ≥3 dòng, điểm/nước, 3 sao màn, đấu 1v1, sao thử thách); *loại* tất định theo ngày, *mức* theo band Bậc (0–3) chốt ở lần ghi đầu của ngày; đổi được 1 nhiệm vụ/ngày (lấy loại thứ 4 của ngày).
+- **Lịch sử ván**: mỗi ván nộp xong ghi `users/{uid}/games/{gameId}` + bộ đếm năm trong cùng transaction (chỉ ghi, không thêm lượt đọc). Trang `/profile/games`.
 - Theme: 4 theme gốc miễn phí; `sunset` mở ở cấp 5, `forest`/`galaxy` mua bằng xu, `gold` chỉ qua mời bạn (`theme-unlock-rules.ts`). Màn chơi tự về theme mặc định nếu profile cho thấy theme đang chọn không thuộc về người chơi.
 - Mời bạn: link `/?ref=CODE` → `ReferralLinkCapture` giữ mã tới khi có uid rồi claim (chỉ khi chưa được mời, < 3 ván, không tự mời, không mời chéo). Ván đủ nước thứ 3 (đếm `referralGames`) của người được mời → cả hai +200 xu + theme `gold`; người mời nhận xu tối đa 10 lần, thành tích "referral-1" cộng ngay trong cùng transaction. uid người mời không bao giờ trả về client.
 
@@ -151,6 +156,7 @@ HUD/dialog đọc store qua selector → React render
 - Điểm (`engine/score-and-combo-rules.ts`): 1/ô đặt + `10·n(n+1)/2` cho n dòng xoá × combo (1 + 0.5/bậc), combo giữ 3 nước không xoá; dọn sạch bàn +300.
 - Khay đầu ván (bàn trống, không phải màn chơi): `engine/opening-tray-generator.ts` bốc theo seed 1 trong 19 bộ 3 khối to đặt được để xoá ≥ 2 dòng (thứ tự + màu ngẫu nhiên), thay lượt smart đầu; màn chơi giữ bộ chia cũ (thiết kế theo seed).
 - Chia khối (`engine/piece-tray-generator.ts`): chu kỳ smart/bag/bag. `board-smart-selector.ts` chọn tuần tự theo bàn và mô phỏng xoá dòng; `tray-generator-config.ts` chứa túi khối, nhánh điểm 100/800 và shuffle. Túi rút không hoàn lại, không bắt buộc cả ba khối đặt được; chỉ thay slot đầu bằng dot nếu khay và ô cất đều không có nước đi. State lưu bộ đếm, hàng đợi túi và phần còn lại. Chi tiết/kiểm chứng: `classic-tray-generation.md`.
+- Cài đặt (`block-puzzle.settings`): âm thanh, rung, theme, độ nâng khối khi kéo (thấp/vừa/cao), ký hiệu mù màu, giảm chuyển động (theo hệ thống/bật/tắt), tô dòng sắp xoá. Chơi bằng bàn phím khi canvas có focus: 1/2/3 chọn khối, Tab đổi khối, mũi tên di chuyển, Enter/Space đặt, S cất, R đổi khay, Esc thoát; vùng `aria-live` đọc điểm.
 - Bàn mở đầu trống. Ô cất mở từ 300 điểm (giữ cho các ván sau); đổi khay 2 lượt/ván; hồi sinh 1 lần: xoá 2 hàng + 2 cột đầy nhất rồi chia khay mới (`engine/power-up-rules.ts`).
 - Tutorial 3 bài tự thiết kế (`engine/tutorial.ts`), chạy trên state tạm, không đụng save.
 - UI: khối vẽ bằng code, 4 theme (`render/block-color-palette.ts`), font Inter, âm thanh Web Audio tổng hợp. Không có asset hay dữ liệu lấy từ game khác.

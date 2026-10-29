@@ -1,3 +1,5 @@
+import type { GameRunStats } from "./game-run-stats"
+
 export const BOARD_SIZE = 8
 export const BOARD_CELL_COUNT = BOARD_SIZE * BOARD_SIZE
 export const TRAY_SIZE = 3
@@ -79,6 +81,8 @@ export interface GameState {
   noPowerUps?: boolean
   /** Tổng số hàng + cột đã xoá trong ván (mục tiêu màn chơi). */
   linesCleared?: number
+  /** Chỉ số kỹ năng của ván (reducer cộng dồn); save cũ thiếu → coi như rỗng. */
+  runStats?: GameRunStats
   lastMove: MoveResult | null
 }
 

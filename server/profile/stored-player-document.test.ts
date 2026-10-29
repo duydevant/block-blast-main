@@ -14,6 +14,7 @@ const game: ReplaySummary = {
   boardClears: 1,
   isGameOver: true,
   stashUnlocked: true,
+  runStats: { clearMoves: 10, multiClears: [3, 1, 0], maxLinesInMove: 3, bestCombo: 4, boardClears: 1, stashUses: 0, replaceUses: 0, reviveUsed: false },
 }
 
 describe("parseStoredPlayer", () => {
@@ -35,6 +36,10 @@ describe("parseStoredPlayer", () => {
       levelStars: {},
       duelStats: { played: 0, won: 0 },
       dailyBest: 0,
+      recentFormScores: [],
+      tierRewardsClaimed: [],
+      statsByMode: {},
+      dailyThreeStarDays: 0,
     })
   })
 
@@ -89,6 +94,10 @@ describe("applyVerifiedGameToPlayerStats", () => {
       bestCombo: 4,
       boardClears: 2,
       totalMoves: 120,
+      pureGames: 2,
+      bestPureScore: 840,
+      multiClears3: 2,
+      maxLinesInMove: 3,
     })
   })
 })

@@ -9,6 +9,8 @@ export enum Routes {
   /** Trang thách đấu: `${Routes.CHALLENGE}/{id}`. */
   CHALLENGE = "/c",
   PROFILE = "/profile",
+  /** Lịch sử ván đã nộp của chính mình. */
+  PROFILE_GAMES = "/profile/games",
   /** Giải thích + bảng của thử thách ngày. */
   DAILY = "/daily",
   HOW_TO_PLAY = "/how-to-play",
@@ -21,6 +23,8 @@ export enum Routes {
 export enum ApiRoutes {
   GAMES_START = "/api/games/start",
   GAMES_SUBMIT = "/api/games/submit",
+  GAMES_HISTORY = "/api/games/history",
+  MISSIONS_REPLACE = "/api/missions/replace",
   PROFILE = "/api/profile",
   DAILY = "/api/daily",
   DAILY_CLAIM = "/api/daily/claim",

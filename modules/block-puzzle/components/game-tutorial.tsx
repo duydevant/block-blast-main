@@ -5,6 +5,7 @@ import { useI18n } from "@/lib/i18n"
 import { playSound, unlockAudio } from "../audio/sound-effects-player"
 import { createTutorialStage, placeTutorialPiece, TUTORIAL_SLOT, tutorialTarget, type TutorialStage } from "../engine/tutorial"
 import { findShape } from "../engine/piece-shape-catalog"
+import { prefersReducedMotion } from "../input/haptic-feedback"
 import { attachPointerDragController, type DragState } from "../input/pointer-drag-controller"
 import { renderFrame } from "../render/board-canvas-renderer"
 import { holdLabels } from "./block-puzzle-game-canvas"
@@ -12,7 +13,7 @@ import { drawBlock, setBlockTheme } from "../render/block-cell-painter"
 import { DEFAULT_BLOCK_THEME } from "../render/block-color-palette"
 import { computeLayout, trayPieceOrigin, type CanvasLayout } from "../render/canvas-layout-metrics"
 import { createMoveEffects, pruneEffects, type GameEffect } from "../render/effects-timeline"
-import { useBlockPuzzleSettingsStore } from "../store/block-puzzle-settings-store"
+import { resolveReducedMotion, useBlockPuzzleSettingsStore } from "../store/block-puzzle-settings-store"
 
 /** A separate, ephemeral tutorial: classic progress and best score are never replaced. */
 export function GameTutorial({ onComplete }: { onComplete: () => void }) {
@@ -41,7 +42,7 @@ export function GameTutorial({ onComplete }: { onComplete: () => void }) {
     let settling = false
     let disposed = false
     let cycleStart = performance.now()
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
+    const reduced = resolveReducedMotion(useBlockPuzzleSettingsStore.getState().reduceMotion, prefersReducedMotion())
     const draw = (now: number) => {
       if (disposed) return
       if (layout) {

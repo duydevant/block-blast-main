@@ -1,5 +1,7 @@
 /** Kiểu dữ liệu bảng xếp hạng dùng chung giữa API (server) và UI (client). */
 
+import type { PlayerTierId } from "@/modules/progression/player-form-rules"
+
 /** Tab trang /leaderboard: "today" = mọi ván tính điểm hôm nay, "challenge" = tổng điểm thử thách ngày cả tuần. */
 export const LEADERBOARD_TABS = ["today", "weekly", "challenge", "alltime"] as const
 export type LeaderboardTab = (typeof LEADERBOARD_TABS)[number]
@@ -13,6 +15,8 @@ export interface LeaderboardRow {
   /** null = khách chưa đặt tên → UI hiện "Khách #ABCD". */
   displayName: string | null
   score: number
+  /** Bậc của người chơi lúc ghi điểm (hàng cũ không có). */
+  tier?: PlayerTierId
 }
 
 export interface MyLeaderboardStanding {

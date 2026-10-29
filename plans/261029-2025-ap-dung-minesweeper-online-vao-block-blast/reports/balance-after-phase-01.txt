@@ -1,0 +1,13 @@
+┌──────────────┬────────┐
+│ (index)      │ Values │
+├──────────────┼────────┤
+│ games        │ 300    │
+│ averageScore │ 1186   │
+│ medianScore  │ 951    │
+│ averageMoves │ 55     │
+│ clearRate    │ 0.374  │
+│ comboRate    │ 0.309  │
+│ boardClears  │ 66     │
+│ cappedGames  │ 0      │
+└──────────────┴────────┘
+300 ván trong 6.1s

@@ -8,9 +8,11 @@ import { leaderboardEn, leaderboardVi } from "@/modules/leaderboard/leaderboard-
 import { playerProfileEn, playerProfileVi } from "@/modules/player-profile/player-profile-translations"
 import { dailyChallengeEn, dailyChallengeVi } from "@/modules/progression/daily-challenge-translations"
 import { progressionEn, progressionVi } from "@/modules/progression/progression-translations"
+import { skillProgressionEn, skillProgressionVi } from "@/modules/progression/skill-progression-translations"
 import { pwaEn, pwaVi } from "@/modules/pwa/pwa-translations"
 import { howToPlayEn, howToPlayVi } from "@/modules/seo/how-to-play-translations"
 import { gameModesEn, gameModesVi } from "@/modules/game-modes/game-modes-translations"
+import { gameSettingsEn, gameSettingsVi } from "@/modules/block-puzzle/game-settings-translations"
 import { uiEn, uiVi } from "./ui-translations"
 
 import { type Locale, locales } from "./i18n-locales"
@@ -40,10 +42,12 @@ const en = {
   ...leaderboardEn,
   ...challengeEn,
   ...progressionEn,
+  ...skillProgressionEn,
   ...dailyChallengeEn,
   ...pwaEn,
   ...howToPlayEn,
   ...gameModesEn,
+  ...gameSettingsEn,
   ...uiEn,
 } as const
 
@@ -71,10 +75,12 @@ const vi: TranslationDictionary = {
   ...leaderboardVi,
   ...challengeVi,
   ...progressionVi,
+  ...skillProgressionVi,
   ...dailyChallengeVi,
   ...pwaVi,
   ...howToPlayVi,
   ...gameModesVi,
+  ...gameSettingsVi,
   ...uiVi,
 }
 

@@ -5,6 +5,7 @@ import {
   EMPTY_PLAYER_STATS,
   type PlayerProfile,
 } from "@/modules/player-profile/player-profile-types"
+import { FORM_WINDOW, formFromRecent, highestTier, tierForForm } from "@/modules/progression/player-form-rules"
 import { effectiveDailyStreak } from "@/server/daily/advance-daily-streak"
 
 /** Tên collection Firestore — dùng chung cho mọi chỗ đọc/ghi. */
@@ -19,9 +20,15 @@ export const LEADERBOARD_ENTRIES_SUBCOLLECTION = "entries"
 export const MISSIONS_SUBCOLLECTION = "missions"
 /** referralCodes/{code} → { uid }: tra mã mời ra người mời. */
 export const REFERRAL_CODES_COLLECTION = "referralCodes"
+/** users/{uid}/games/{gameId}: lịch sử ván đã nộp (TTL `expireAt`). */
+export const GAMES_HISTORY_SUBCOLLECTION = "games"
+/** users/{uid}/years/{YYYY}: bộ đếm cả năm (tổng kết năm). */
+export const YEARS_SUBCOLLECTION = "years"
 
 const count = z.number().int().nonnegative().catch(0)
 const idList = z.array(z.string()).catch([])
+const RANKED_MODES = ["classic", "daily", "challenge", "level", "duel"] as const
+const modeStatsSchema = z.object({ games: count, best: count, total: count })
 
 const storedPlayerSchema = z.object({
   displayName: z.string().nullable().catch(null),
@@ -35,6 +42,10 @@ const storedPlayerSchema = z.object({
       bestCombo: count,
       boardClears: count,
       totalMoves: count,
+      pureGames: count,
+      bestPureScore: count,
+      multiClears3: count,
+      maxLinesInMove: count,
     })
     .catch(EMPTY_PLAYER_STATS),
   streak: z
@@ -59,6 +70,16 @@ const storedPlayerSchema = z.object({
   dailyBest: count,
   /** Điểm cao nhất các ngày thử thách gần đây (tính phong độ). Thiếu = người chơi cũ chưa chuyển, đọc lịch sử một lần. */
   dailyRecent: z.record(z.string().regex(/^\d{8}$/), z.number().int().nonnegative()).optional().catch(undefined),
+  /** Điểm các ván tính phong độ gần nhất (mới nhất ở cuối, tối đa FORM_WINDOW). */
+  recentFormScores: z
+    .array(z.number().int().nonnegative())
+    .catch([])
+    .transform((list) => list.slice(-FORM_WINDOW)),
+  /** Bậc đã nhận thưởng lần đầu (cũng là các Bậc từng đạt). */
+  tierRewardsClaimed: idList,
+  statsByMode: z.partialRecord(z.enum(RANKED_MODES), modeStatsSchema).catch({}),
+  /** Số ngày thử thách đạt ★★★. */
+  dailyThreeStarDays: count,
 })
 
 /** Field người dùng được ghi trong users/{uid}; doc thiếu/hỏng field nào thì field đó về mặc định. */
@@ -81,6 +102,10 @@ const EMPTY_STORED_PLAYER: StoredPlayer = {
   levelStars: {},
   duelStats: { played: 0, won: 0 },
   dailyBest: 0,
+  recentFormScores: [],
+  tierRewardsClaimed: [],
+  statsByMode: {},
+  dailyThreeStarDays: 0,
 }
 
 export function parseStoredPlayer(data: unknown): StoredPlayer {
@@ -104,6 +129,20 @@ export function toPlayerProfile(uid: string, stored: StoredPlayer, today: string
     referred: stored.referredBy !== null,
     levelStars: stored.levelStars,
     duelStats: stored.duelStats,
+    ...playerFormView(stored),
+    statsByMode: stored.statsByMode,
+    dailyThreeStarDays: stored.dailyThreeStarDays,
+  }
+}
+
+/** Phong độ, Bậc hiện tại và Bậc cao nhất từng đạt (hiển thị). */
+export function playerFormView(stored: Pick<StoredPlayer, "recentFormScores" | "tierRewardsClaimed">) {
+  const form = formFromRecent(stored.recentFormScores)
+  return {
+    form,
+    formGames: stored.recentFormScores.length,
+    tier: tierForForm(form),
+    highestTier: highestTier(stored.tierRewardsClaimed),
   }
 }
 

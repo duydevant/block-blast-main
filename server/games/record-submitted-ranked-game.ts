@@ -6,28 +6,30 @@ import { replayRecordedGame, type RecordedGameAction } from "@/modules/block-puz
 import { NO_GAME_REWARDS, type SubmitRankedGameResponse } from "@/modules/player-profile/player-profile-types"
 import { findLevel, starsForLevel } from "@/modules/game-modes/level-catalog"
 import { withRecentBest } from "@/modules/progression/daily-challenge-goals"
-import { dailyMissionProgressSchema } from "@/modules/progression/daily-mission-catalog"
 import { advanceDailyStreak } from "@/server/daily/advance-daily-streak"
 import { dailyRunOutcome, readDailyRunContext, releaseDailyRun, writeDailyRunResult } from "@/server/daily/apply-daily-run-result"
 import { dayKeyFor } from "@/server/daily/daily-challenge-calendar"
 import { getAdminFirestore } from "@/server/firebase/firebase-admin-app"
 import { HttpError } from "@/server/http/authenticated-json-route"
 import { boardIdsForRankedGame } from "@/server/leaderboards/leaderboard-board-ids"
-import { leaderboardRef, parseLeaderboardTop } from "@/server/leaderboards/leaderboard-documents"
-import { mergeScoreIntoTopList } from "@/server/leaderboards/merge-score-into-top-list"
 import { applyProgressionForVerifiedGame, referralIsDue } from "@/server/progression/apply-progression-for-verified-game"
+import { parseMissionDay } from "@/server/progression/mission-day-documents"
 import {
   GAME_SESSIONS_COLLECTION,
-  LEADERBOARD_ENTRIES_SUBCOLLECTION,
+  GAMES_HISTORY_SUBCOLLECTION,
   MISSIONS_SUBCOLLECTION,
   parseStoredPlayer,
   USERS_COLLECTION,
+  YEARS_SUBCOLLECTION,
 } from "@/server/profile/stored-player-document"
 
 import { CHALLENGE_RESULTS_SUBCOLLECTION, CHALLENGES_COLLECTION } from "@/server/challenges/challenge-documents"
 
 import { applyVerifiedGameToPlayerStats } from "./apply-verified-game-to-player-stats"
+import { historyDocFor, yearCounterUpdate } from "./game-history-documents"
 import { storedSessionSchema, variantForSession } from "./stored-game-session"
+import { verifiedGamePlayerUpdates } from "./verified-game-player-updates"
+import { readImprovedBoards, writeLeaderboardEntries } from "./write-leaderboard-entries"
 
 function challengeResultRefs(db: Firestore, challengeId: string, uid: string) {
   const challenge = db.collection(CHALLENGES_COLLECTION).doc(challengeId)
@@ -45,7 +47,8 @@ type SubmitOutcome =
  * tổng tuần, streak (`apply-daily-run-result`); chỉ lượt đầu vào bảng Hôm nay / Tuần / Mọi lúc. Lượt khác cộng thống kê.
  * Challenge: không vào bảng xếp hạng, chỉ ghi điểm tốt nhất vào challenges/{id}/results/{uid}.
  * Duel: chỉ cộng thống kê/thưởng; kết quả trận do server chấm từ nước đi trên RTDB (settle-duel-round).
- * Mọi chế độ: cộng XP/xu, nhiệm vụ ngày (theo ngày nộp), thành tích, quà mời bạn.
+ * Mọi chế độ: cộng XP/xu, nhiệm vụ ngày (theo ngày nộp), thành tích, quà mời bạn, phong độ/Bậc, lịch sử ván
+ * (users/{uid}/games) và bộ đếm năm (users/{uid}/years).
  */
 export async function recordSubmittedRankedGame(
   uid: string,
@@ -91,14 +94,8 @@ export async function recordSubmittedRankedGame(
       tx.update(sessionRef, { status: "abandoned", finishedAt })
       return { ok: true, response: { score: 0, stats: stored.stats, improvedBoards: [], rewards: NO_GAME_REWARDS } }
     }
-    const boardIds = boardIdsForRankedGame(mode, now, day, countsForDaily, daily?.firstRun ?? true)
-    const entryRefs = boardIds.map((boardId) => leaderboardRef(db, boardId).collection(LEADERBOARD_ENTRIES_SUBCOLLECTION).doc(uid))
-    const entrySnaps = entryRefs.length > 0 ? await tx.getAll(...entryRefs) : []
-    const improved = boardIds.filter((_, index) => {
-      const previous = entrySnaps[index].get("score")
-      return typeof previous !== "number" || summary.score > previous
-    })
-    const boardSnaps = improved.length > 0 ? await tx.getAll(...improved.map((boardId) => leaderboardRef(db, boardId))) : []
+    const firstDailyRun = daily?.firstRun ?? true
+    const boards = await readImprovedBoards(tx, db, boardIdsForRankedGame(mode, now, day, countsForDaily, firstDailyRun), uid, summary.score)
     const challengeRefs = mode === "challenge" && challengeId ? challengeResultRefs(db, challengeId, uid) : null
     const [challengeResultSnap, challengeSnap] = challengeRefs ? await tx.getAll(challengeRefs.result, challengeRefs.challenge) : []
     const previousChallengeScore = challengeResultSnap?.get("score")
@@ -112,6 +109,8 @@ export async function recordSubmittedRankedGame(
     const inviterRef = referralIsDue(stored, summary.moveCount) && stored.referredBy ? db.collection(USERS_COLLECTION).doc(stored.referredBy) : null
     const [missionsSnap, inviterSnap] = await tx.getAll(missionsRef, ...(inviterRef ? [inviterRef] : []))
     const levelDefinition = mode === "level" && levelId !== null ? findLevel(levelId) : undefined
+    const missionDay = parseMissionDay(missionsSnap.data())
+    const updates = verifiedGamePlayerUpdates({ stored, summary, mode, countsForDaily, firstDailyRun, missionDay, dailyReward: dailyOutcome?.reward ?? null })
     const progression = applyProgressionForVerifiedGame({
       stored,
       stats,
@@ -119,19 +118,23 @@ export async function recordSubmittedRankedGame(
       summary,
       countedDaily: countsForDaily,
       missionDay: today,
-      missionProgress: dailyMissionProgressSchema.parse(missionsSnap.get("progress")),
+      missionProgress: missionDay.progress,
+      mode,
+      missionBand: updates.missionBand,
+      missionReplacedSlot: missionDay.replacedSlot,
+      tierAfter: updates.tierAfter,
+      dailyStars: dailyOutcome?.reward.stars ?? 0,
+      todayGames1000: updates.games1000,
+      dailyThreeStarDays: updates.dailyThreeStarDays,
       inviter: inviterSnap?.exists ? parseStoredPlayer(inviterSnap.data()) : null,
       level: levelDefinition ? { id: levelDefinition.id, stars: starsForLevel(levelDefinition, replay.state) } : null,
     })
 
     // ── Ghi ──
-    const row = { uid, displayName: stored.displayName, score: summary.score }
-    improved.forEach((boardId, index) => {
-      const ref = leaderboardRef(db, boardId)
-      tx.set(ref.collection(LEADERBOARD_ENTRIES_SUBCOLLECTION).doc(uid), { ...row, updatedAt: finishedAt })
-      const top = mergeScoreIntoTopList(parseLeaderboardTop(boardSnaps[index].data()), row)
-      if (top) tx.set(ref, { top, updatedAt: finishedAt })
-    })
+    const tier = updates.tierAfter === "unranked" ? undefined : updates.tierAfter
+    writeLeaderboardEntries(tx, db, boards, { uid, displayName: stored.displayName, score: summary.score, ...(tier ? { tier } : {}) }, finishedAt)
+    tx.set(userRef.collection(GAMES_HISTORY_SUBCOLLECTION).doc(gameId), historyDocFor({ mode, summary, levelId, day, finishedAt, nowMs: now.getTime() }))
+    tx.set(userRef.collection(YEARS_SUBCOLLECTION).doc(today.slice(0, 4)), yearCounterUpdate(summary, mode, updates.firstGameToday), { merge: true })
 
     // Thách đấu đã bị xoá → vẫn ghi thống kê, bỏ phần kết quả thách đấu (không để lượt nộp lỗi mãi).
     if (challengeRefs && challengeSnap?.exists) {
@@ -146,7 +149,17 @@ export async function recordSubmittedRankedGame(
     }
     // Xu mốc thử thách cộng chung với xu của ván (nhiệm vụ, thành tích…).
     const dailyCoins = dailyOutcome?.reward.coins ?? 0
-    tx.set(missionsRef, { progress: progression.missionProgress, updatedAt: finishedAt }, { merge: true })
+    tx.set(
+      missionsRef,
+      {
+        progress: progression.missionProgress,
+        band: updates.missionBand,
+        gamesToday: updates.gamesToday,
+        games1000: updates.games1000,
+        updatedAt: finishedAt,
+      },
+      { merge: true }
+    )
     if (inviterRef && progression.inviterReward) {
       const { coins, addTheme, achievements } = progression.inviterReward
       tx.set(
@@ -164,6 +177,9 @@ export async function recordSubmittedRankedGame(
       userRef,
       {
         stats,
+        statsByMode: updates.statsByMode,
+        recentFormScores: updates.recentFormScores,
+        dailyThreeStarDays: updates.dailyThreeStarDays,
         stashUnlocked: stored.stashUnlocked || stashEarned,
         ...(day && countsForDaily ? { streak } : {}),
         ...progression.playerFields,
@@ -181,7 +197,7 @@ export async function recordSubmittedRankedGame(
     }
     tx.update(sessionRef, { status: "done", score: summary.score, moveCount: summary.moveCount, finishedAt })
     const rewards = { ...progression.rewards, coins: progression.rewards.coins + dailyCoins, daily: dailyOutcome?.reward ?? null }
-    return { ok: true, response: { score: summary.score, stats, improvedBoards: improved, rewards } }
+    return { ok: true, response: { score: summary.score, stats, improvedBoards: boards.improved, rewards } }
   })
 
   if (!outcome.ok) throw outcome.error

@@ -5,6 +5,7 @@ import type { DuelStartInfo } from "@/modules/duel/duel-types"
 import type { DailyGoals, DailyWeekStatus } from "@/modules/progression/daily-challenge-goals"
 import type { DailyRewardStatus } from "@/modules/progression/daily-reward-track"
 import type { DailyMissionStatus } from "@/modules/progression/daily-mission-catalog"
+import type { PlayerTier, PlayerTierId } from "@/modules/progression/player-form-rules"
 
 export interface PlayerStats {
   gamesPlayed: number
@@ -14,7 +15,22 @@ export interface PlayerStats {
   bestCombo: number
   boardClears: number
   totalMoves: number
+  /** Ván "thuần" (không Cất / Đổi khối / Hồi sinh) đủ nước. */
+  pureGames: number
+  bestPureScore: number
+  /** Tổng số nước xoá ≥ 3 dòng cùng lúc. */
+  multiClears3: number
+  maxLinesInMove: number
 }
+
+/** Thống kê gọn theo từng chế độ chơi. */
+export interface ModeStats {
+  games: number
+  best: number
+  total: number
+}
+
+export type StatsByMode = Partial<Record<RankedGameMode, ModeStats>>
 
 /** Chuỗi ngày liên tiếp hoàn thành thử thách hằng ngày. */
 export interface DailyStreak {
@@ -46,6 +62,17 @@ export interface PlayerProfile {
   /** Số sao cao nhất từng màn ("1" → 3). */
   levelStars: Record<string, number>
   duelStats: DuelStats
+  /** Phong độ (trung vị các ván Vô tận gần nhất); null = chưa đủ ván. */
+  form: number | null
+  /** Số ván đang có trong cửa sổ phong độ. */
+  formGames: number
+  /** Bậc hiện tại theo phong độ. */
+  tier: PlayerTier
+  /** Bậc cao nhất từng đạt. */
+  highestTier: PlayerTier
+  statsByMode: StatsByMode
+  /** Số ngày thử thách đạt ★★★ (tiến độ thành tích). */
+  dailyThreeStarDays: number
 }
 
 export interface DuelStats {
@@ -69,6 +96,10 @@ export const EMPTY_PLAYER_STATS: PlayerStats = {
   bestCombo: 0,
   boardClears: 0,
   totalMoves: 0,
+  pureGames: 0,
+  bestPureScore: 0,
+  multiClears3: 0,
+  maxLinesInMove: 0,
 }
 
 export const DISPLAY_NAME_MIN_LENGTH = 2
@@ -125,6 +156,8 @@ export interface GameRewards {
   level?: { id: number; stars: number; improved: boolean } | null
   /** Lượt thử thách ngày tính điểm: sao của ngày sau lượt này, sao / kỷ lục mới đạt (xu đã gộp vào `coins`). */
   daily?: DailyRunGameReward | null
+  /** Bậc vừa lần đầu đạt được ở ván này (cao nhất nếu lên nhiều Bậc); xu thưởng đã gộp vào `coins`. */
+  tierUp?: PlayerTierId | null
 }
 
 export interface DailyRunGameReward {
@@ -136,7 +169,7 @@ export interface DailyRunGameReward {
   coins: number
 }
 
-export const NO_GAME_REWARDS: GameRewards = { xp: 0, coins: 0, levelUp: null, missions: [], achievements: [], referralBonus: false, level: null }
+export const NO_GAME_REWARDS: GameRewards = { xp: 0, coins: 0, levelUp: null, missions: [], achievements: [], referralBonus: false, level: null, tierUp: null }
 
 /** POST /api/games/submit */
 export interface SubmitRankedGameResponse {
@@ -170,6 +203,8 @@ export interface DailyStatusResponse {
   streak: DailyStreak
   /** 3 nhiệm vụ hôm nay kèm tiến độ. */
   missions: DailyMissionStatus[]
+  /** Hôm nay còn lượt đổi nhiệm vụ (1 lần/ngày). */
+  missionReplaceAvailable: boolean
   /** Thưởng hoàn thành thử thách hôm nay (vòng 7 ngày theo chuỗi). */
   reward: DailyRewardStatus
 }

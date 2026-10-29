@@ -1,3 +1,4 @@
+import { EMPTY_RUN_STATS, type GameRunStats } from "./game-run-stats"
 import { createNewGame, gameReducer } from "./game-state-reducer"
 import type { GameAction, GameState, GameVariant } from "./game-types"
 
@@ -26,6 +27,8 @@ export interface ReplaySummary {
   boardClears: number
   isGameOver: boolean
   stashUnlocked: boolean
+  /** Chỉ số kỹ năng của ván (xoá nhiều dòng, trợ giúp đã dùng…). */
+  runStats: GameRunStats
 }
 
 export type ReplayResult =
@@ -45,20 +48,12 @@ export function replayRecordedGame(start: RankedGameStart, actions: readonly Rec
   if (actions.length > MAX_RECORDED_ACTIONS) return { ok: false, reason: "too-many-actions" }
 
   let state = createRankedGameStartState(start)
-  let linesCleared = 0
-  let bestCombo = 0
-  let boardClears = 0
-
   for (let index = 0; index < actions.length; index++) {
     const next = gameReducer(state, actions[index])
     if (next === state) return { ok: false, reason: "invalid-action", actionIndex: index }
-    if (actions[index].type === "PLACE_PIECE" && next.lastMove) {
-      linesCleared += next.lastMove.clearedRows.length + next.lastMove.clearedCols.length
-      bestCombo = Math.max(bestCombo, next.lastMove.combo)
-      if (next.lastMove.boardCleared) boardClears++
-    }
     state = next
   }
+  const runStats = state.runStats ?? EMPTY_RUN_STATS
 
   return {
     ok: true,
@@ -66,11 +61,12 @@ export function replayRecordedGame(start: RankedGameStart, actions: readonly Rec
     summary: {
       score: state.score,
       moveCount: state.moveCount,
-      linesCleared,
-      bestCombo,
-      boardClears,
+      linesCleared: state.linesCleared ?? 0,
+      bestCombo: runStats.bestCombo,
+      boardClears: runStats.boardClears,
       isGameOver: state.isGameOver,
       stashUnlocked: Boolean(state.stashUnlocked),
+      runStats,
     },
   }
 }

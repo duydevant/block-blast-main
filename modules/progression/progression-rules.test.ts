@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import { BLOCK_THEME_IDS } from "@/modules/block-puzzle/render/block-color-palette"
 import { EMPTY_PLAYER_STATS } from "@/modules/player-profile/player-profile-types"
 
-import { ACHIEVEMENTS, newlyMetAchievements } from "./achievement-catalog"
+import { ACHIEVEMENT_CATEGORIES, ACHIEVEMENTS, type AchievementState, newlyMetAchievements } from "./achievement-catalog"
 import {
   advanceDailyMissions,
   DAILY_MISSION_COUNT,
@@ -22,8 +22,25 @@ const game = (overrides: Partial<MissionGameResult> = {}): MissionGameResult => 
   bestCombo: 0,
   boardClears: 0,
   countedDaily: false,
+  pure: false,
+  multiClears3: 0,
+  levelThreeStars: false,
+  isDuel: false,
+  dailyStars: 0,
   ...overrides,
 })
+
+const baseAchievementState: AchievementState = {
+  stats: EMPTY_PLAYER_STATS,
+  bestStreak: 0,
+  level: 1,
+  referralCount: 0,
+  levelStarsTotal: 0,
+  duelWins: 0,
+  highestTier: "unranked",
+  todayGames1000: 0,
+  dailyThreeStarDays: 0,
+}
 
 describe("level curve", () => {
   it("maps XP to levels at exact thresholds", () => {
@@ -92,9 +109,26 @@ describe("daily missions", () => {
 
 describe("achievements", () => {
   it("unlocks only new achievements that are met", () => {
-    const state = { stats: { ...EMPTY_PLAYER_STATS, gamesPlayed: 1, bestCombo: 16 }, bestStreak: 0, level: 1, referralCount: 0 }
+    const state = { ...baseAchievementState, stats: { ...EMPTY_PLAYER_STATS, gamesPlayed: 1, bestCombo: 16 } }
     expect(newlyMetAchievements([], state).map((item) => item.id)).toEqual(["first-game", "combo-15"])
     expect(newlyMetAchievements(["first-game"], state).map((item) => item.id)).toEqual(["combo-15"])
+  })
+
+  it("covers style, tier and marathon achievements", () => {
+    const state = {
+      ...baseAchievementState,
+      stats: { ...EMPTY_PLAYER_STATS, bestPureScore: 2500, maxLinesInMove: 4 },
+      highestTier: "gold" as const,
+      todayGames1000: 10,
+      levelStarsTotal: 30,
+    }
+    expect(newlyMetAchievements([], state).map((item) => item.id).sort()).toEqual(
+      ["marathon", "pure-2000", "quad-clear", "stars-30", "tier-gold"].sort()
+    )
+  })
+
+  it("groups every achievement into a known category", () => {
+    expect(ACHIEVEMENTS.every((item) => ACHIEVEMENT_CATEGORIES.includes(item.category))).toBe(true)
   })
 
   it("has unique ids", () => {

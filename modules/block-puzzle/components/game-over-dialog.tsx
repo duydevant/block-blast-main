@@ -13,10 +13,12 @@ import { LevelResultPanel, useLevelOutcome } from "@/modules/game-modes/componen
 import { usePlayerProfileQuery } from "@/modules/player-profile/use-player-profile-query"
 import { DailyRunGameOverNote, useDailyNewGameLabel } from "@/modules/progression/components/daily-run-game-over-note"
 import { useLastGameRewardsStore } from "@/modules/progression/last-game-rewards-store"
+import { TierProgressNote } from "@/modules/progression/components/tier-progress-note"
 import { InstallAppButton } from "@/modules/pwa/components/install-app-button"
 
 import { useBlockPuzzleGameStore } from "../store/block-puzzle-game-store"
 import { useRestartCurrentMode } from "./use-special-mode-launcher"
+import { GameOverRunMetrics } from "./game-over-run-metrics"
 import { GameOverShareActions } from "./game-over-share-actions"
 import { GAME_PANEL, SECONDARY_BUTTON } from "./game-ui-styles"
 
@@ -98,6 +100,10 @@ export function GameOverDialog() {
   const submitted = useBlockPuzzleGameStore((state) => state.rankedSession?.queued ?? false)
   const [revealedKey, setRevealedKey] = useState<string | null>(null)
   const level = useLevelOutcome()
+  // Phong độ chỉ tính ván Vô tận (+ lượt đầu thử thách ngày) → chỉ nhắc Bậc ở ván Vô tận tính điểm.
+  const isRankedEndless = useBlockPuzzleGameStore(
+    (state) => state.rankedSession !== null && state.dailyDay === null && state.challenge === null && state.variantRun === null
+  )
   const newGameLabel = useDailyNewGameLabel()
 
   // Key riêng cho từng lần game over để ván mới không thừa hưởng trạng thái đã hiện.
@@ -135,7 +141,9 @@ export function GameOverDialog() {
             <AlertDialogTitle className="sr-only">{t("game.gameOverTitle")}</AlertDialogTitle>
             <span className="font-heading text-[80px] leading-[0.9] font-extrabold tracking-tight tabular-nums">{formatNumber(score)}</span>
             <AlertDialogDescription className="sr-only">{t("game.gameOverScore", { score: formatNumber(score) })}</AlertDialogDescription>
+            <GameOverRunMetrics />
             <GameOverRewardChips />
+            {isRankedEndless && <TierProgressNote />}
             {canRevive && (
               <button className={`${CHUNKY_BUTTON.success} h-[60px] w-full text-[22px]`} onClick={() => revive()}>
                 <HeartIcon className="fill-current" aria-hidden="true" />
