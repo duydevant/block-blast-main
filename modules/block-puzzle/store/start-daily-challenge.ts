@@ -9,7 +9,7 @@ export type DailyChallengeStart = "ranked" | "practice"
 
 /**
  * Xin seed thử thách hôm nay rồi vào ván. Cần mạng + đã đăng nhập (seed daily chỉ server biết).
- * Lượt đầu trong ngày tính điểm; các lượt sau là luyện tập (cùng seed, không nộp).
+ * Mỗi ngày 3 lượt tính điểm; hết lượt thì là luyện tập (cùng seed, không nộp).
  */
 export async function startDailyChallenge(): Promise<DailyChallengeStart> {
   const auth = useFirebaseAuthStore.getState()

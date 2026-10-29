@@ -11,8 +11,6 @@ export enum Routes {
   PROFILE = "/profile",
   /** Giải thích + bảng của thử thách ngày. */
   DAILY = "/daily",
-  /** Sự kiện tuần: mục tiêu + thưởng. */
-  EVENT = "/event",
   HOW_TO_PLAY = "/how-to-play",
   LEVELS = "/levels",
   /** Phòng đấu: `${Routes.DUEL}/{id}`. */
@@ -26,8 +24,7 @@ export enum ApiRoutes {
   PROFILE = "/api/profile",
   DAILY = "/api/daily",
   DAILY_CLAIM = "/api/daily/claim",
-  EVENTS = "/api/events",
-  EVENTS_CLAIM = "/api/events/claim",
+  DAILY_WEEK_CLAIM = "/api/daily/week-claim",
   LEADERBOARDS = "/api/leaderboards",
   CHALLENGES = "/api/challenges",
   DUELS = "/api/duels",

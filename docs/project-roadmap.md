@@ -65,6 +65,16 @@ Plan: `plans/261027-1800-retention-acquisition-features-firebase/`
 - Nước đi lên RTDB kèm giờ server, server chấm từ nước đi: chốt ngay khi người còn sống vượt điểm người đã dừng; xem bàn đối thủ trực tiếp.
 - Phòng nhiều ván cùng mã (sẵn sàng → ván mới, tỉ số, lịch sử), người xem bằng link/mã, đếm người xem. Cần publish `database.rules.json` mới.
 
+## v2.4 — Khay đầu ngẫu nhiên, 1v1 gọn hơn (2026-10-29)
+
+- Khay đầu ván ngẫu nhiên theo seed (19 bộ khối to, luôn nổ được ≥ 2 dòng) thay cho 3x3, 3x3, 2x2 cố định.
+- Đấu 1v1: bỏ Cất và Đổi khối (bàn to hơn); phòng đấu thêm nút "Copy link" cạnh "Gửi link mời" và "Mời xem".
+
+## v2.5 — Thử thách ngày có mốc cá nhân, gộp sự kiện tuần (2026-10-29)
+
+- Thử thách ngày: 3 lượt/ngày (lấy cao nhất), mốc ★/★★/★★★ theo phong độ của chính người chơi (trung vị 7 ngày) + mốc phá kỷ lục, xu cộng ngay khi đạt; HUD hiện lượt + mốc kế tiếp.
+- Thử thách tuần thay sự kiện tuần: bảng tổng điểm 7 ngày (tab "Thử thách"), rương sao 10★/18★, thưởng hạng nhận thứ Hai. Bỏ chế độ Sự kiện tuần; Vô tận chỉ tính Hôm nay / Tuần / Mọi lúc.
+
 ## Còn mở
 
 - QA trên điện thoại thật (Android Chrome, iOS Safari), cả dọc và ngang.

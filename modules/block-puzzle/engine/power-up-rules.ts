@@ -13,6 +13,7 @@ export const POWER_UP_RULES = {
 } as const
 
 export function isStashUnlocked(state: GameState): boolean {
+  if (state.noPowerUps) return false
   return Boolean(state.stashUnlocked) || state.score >= POWER_UP_RULES.stashUnlockScore
 }
 
@@ -31,7 +32,7 @@ export function stashPiece(state: GameState, slot: number): GameState {
 /** Đổi cả khay lấy 3 khối mới, tốn một lượt. */
 export function replaceTray(state: GameState): GameState {
   const charges = state.replaceCharges ?? POWER_UP_RULES.replaceChargesPerGame
-  if (state.isGameOver || charges <= 0) return state
+  if (state.isGameOver || state.noPowerUps || charges <= 0) return state
   const deal = dealTray(state.board, state.score, state.rngState, state.nextPieceUid, state.generatorState, state.stash)
   return { ...state, ...deal, replaceCharges: charges - 1, lastMove: null, isGameOver: !hasAnyMove(state.board, deal.tray, state.stash) }
 }

@@ -2,6 +2,7 @@
 
 import type { ChallengeOpponent } from "@/modules/challenge/challenge-types"
 import type { DuelStartInfo } from "@/modules/duel/duel-types"
+import type { DailyGoals, DailyWeekStatus } from "@/modules/progression/daily-challenge-goals"
 import type { DailyRewardStatus } from "@/modules/progression/daily-reward-track"
 import type { DailyMissionStatus } from "@/modules/progression/daily-mission-catalog"
 
@@ -52,19 +53,13 @@ export interface DuelStats {
   won: number
 }
 
-/** Sự kiện tuần hiện hành: tuần ISO + luật (xem modules/game-modes/weekly-event-catalog). */
-export interface WeeklyEventInfo {
-  week: string
-  ruleId: string
-}
-
 export const EMPTY_DAILY_STREAK: DailyStreak = { current: 0, best: 0, lastDailyDay: null }
 
 /**
  * classic: seed ngẫu nhiên; daily: seed chung của ngày; challenge: seed của ván người thách đấu;
- * event: luật sự kiện tuần; level: màn chơi (seed + bàn cố định); duel: đấu 1v1 cùng seed.
+ * level: màn chơi (seed + bàn cố định); duel: đấu 1v1 cùng seed.
  */
-export type RankedGameMode = "classic" | "daily" | "challenge" | "event" | "level" | "duel"
+export type RankedGameMode = "classic" | "daily" | "challenge" | "level" | "duel"
 
 export const EMPTY_PLAYER_STATS: PlayerStats = {
   gamesPlayed: 0,
@@ -99,7 +94,7 @@ export function guestTagFromUid(uid: string): string {
 
 /** POST /api/games/start */
 export interface StartRankedGameResponse {
-  /** null = lượt luyện tập daily (đã chơi lượt tính điểm hôm nay) → không nộp. */
+  /** null = lượt luyện tập daily (đã dùng hết lượt tính điểm hôm nay) → không nộp. */
   gameId: string | null
   seed: number
   stashUnlocked: boolean
@@ -108,8 +103,6 @@ export interface StartRankedGameResponse {
   day: string | null
   /** Chỉ có ở challenge: người thách + điểm cần vượt. */
   challenge: ChallengeOpponent | null
-  /** Chỉ có ở event. */
-  event?: WeeklyEventInfo | null
   /** Chỉ có ở level. */
   levelId?: number | null
   /** Chỉ có ở duel. */
@@ -130,6 +123,17 @@ export interface GameRewards {
   referralBonus: boolean
   /** Ván màn chơi: số sao đạt được (0 = chưa qua) và có phá kỷ lục sao của màn không. */
   level?: { id: number; stars: number; improved: boolean } | null
+  /** Lượt thử thách ngày tính điểm: sao của ngày sau lượt này, sao / kỷ lục mới đạt (xu đã gộp vào `coins`). */
+  daily?: DailyRunGameReward | null
+}
+
+export interface DailyRunGameReward {
+  /** Lượt thứ mấy đã nộp trong ngày (1..3). */
+  run: number
+  stars: number
+  newStars: number
+  recordBroken: boolean
+  coins: number
 }
 
 export const NO_GAME_REWARDS: GameRewards = { xp: 0, coins: 0, levelUp: null, missions: [], achievements: [], referralBonus: false, level: null }
@@ -146,14 +150,26 @@ export interface SubmitRankedGameResponse {
 /** GET /api/daily */
 export interface DailyStatusResponse {
   day: string
-  /** Điểm lượt tính điểm hôm nay; null = chưa chơi xong. */
+  /** Điểm cao nhất hôm nay (trong các lượt tính điểm); null = chưa nộp xong lượt nào. */
   todayScore: number | null
-  /** Đã bắt đầu lượt tính điểm hôm nay nhưng chưa nộp (lượt mới sẽ là luyện tập). */
+  /** Có lượt tính điểm đã bắt đầu mà chưa nộp. */
   runInProgress: boolean
+  /** Lượt tính điểm đã dùng / tối đa hôm nay. */
+  runs: { used: number; max: number }
+  /** Mốc hôm nay (đã chốt nếu đã bắt đầu lượt đầu, chưa thì là mốc dự kiến). */
+  goals: DailyGoals
+  /** Điểm cao nhất hôm qua (null = hôm qua không chơi). */
+  yesterdayScore: number | null
+  /** Số sao đã đạt hôm nay + đã phá kỷ lục chưa. */
+  stars: number
+  recordBroken: boolean
+  /** Thử thách tuần này (kết thúc lúc endsAt). */
+  week: DailyWeekStatus & { endsAt: number }
+  /** Tuần trước (nếu có chơi): thưởng hạng (nhận được khi bảng đã chốt) + rương chưa nhận. */
+  previousWeek: (DailyWeekStatus & { rankCoins: number; rankClaimed: boolean; rankClaimable: boolean }) | null
   streak: DailyStreak
   /** 3 nhiệm vụ hôm nay kèm tiến độ. */
   missions: DailyMissionStatus[]
-  event: WeeklyEventInfo
   /** Thưởng hoàn thành thử thách hôm nay (vòng 7 ngày theo chuỗi). */
   reward: DailyRewardStatus
 }

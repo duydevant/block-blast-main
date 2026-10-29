@@ -9,6 +9,8 @@ import { useDailyResetCountdown } from "@/lib/daily-reset-clock"
 import { useI18n } from "@/lib/i18n"
 import { Routes } from "@/lib/routes"
 import { guestTagFromUid } from "@/modules/player-profile/player-profile-types"
+import { DailyChallengeGoalsCard } from "@/modules/progression/components/daily-challenge-goals-card"
+import { DailyChallengeWeekCard } from "@/modules/progression/components/daily-challenge-week-card"
 import { DailyRewardTrack } from "@/modules/progression/components/daily-reward-track"
 import { PushReminderToggle } from "@/modules/push/components/push-reminder-toggle"
 
@@ -31,13 +33,18 @@ function StreakDots({ current, playedToday }: { current: number; playedToday: bo
   )
 }
 
-/** Trang /daily: thử thách ngày là gì (4 ô hình), đồng hồ đổi bộ khối, top hôm nay, nút chơi. */
+/**
+ * Trang /daily: bộ khối hôm nay + lượt còn lại, mục tiêu hôm nay (mốc theo phong độ), nút chơi, thử thách tuần
+ * (tổng điểm, sao, rương, thưởng hạng), luật (4 ô hình), thưởng chuỗi, top hôm nay.
+ */
 export function DailyChallengeExplainer() {
   const { t, formatNumber, localeTag } = useI18n()
   const countdown = useDailyResetCountdown()
   const status = useDailyStatusQuery().data
   const top = useLeaderboardQuery("daily").data?.top.slice(0, 3) ?? []
   const played = status?.todayScore !== null && status?.todayScore !== undefined
+  const runs = status?.runs
+  const runsLeft = runs ? runs.max - runs.used : null
   const streak = status?.streak.current ?? 0
   const date = status ? new Date(Date.UTC(Number(status.day.slice(0, 4)), Number(status.day.slice(4, 6)) - 1, Number(status.day.slice(6, 8)))) : null
   const weekday = date ? date.toLocaleDateString(localeTag, { weekday: "short", timeZone: "UTC" }) : ""
@@ -59,8 +66,24 @@ export function DailyChallengeExplainer() {
             {countdown ? t("daily.changesIn", { time: countdown }) : " "}
           </span>
           {played && <span className="text-sm font-bold">{t("daily.done", { score: formatNumber(status?.todayScore ?? 0) })}</span>}
+          {runs && runsLeft !== null && (
+            <span className={`text-[13px] font-bold ${theme.soft}`}>{runsLeft > 0 ? t("daily.runsLeft", { left: runsLeft, max: runs.max }) : t("daily.noRunsLeft")}</span>
+          )}
         </div>
       </section>
+
+      {status && <DailyChallengeGoalsCard status={status} />}
+
+      <Link href={Routes.PLAY_DAILY} className={`${theme.button} h-16 text-[23px] [&_svg]:size-6`}>
+        <PlayIcon className="fill-current" aria-hidden="true" />
+        {status?.runInProgress
+          ? t("daily.continue")
+          : runs && runsLeft !== null && runsLeft > 0
+            ? t("daily.playRun", { run: runs.used + 1, max: runs.max })
+            : t(runs ? "daily.practice" : "daily.playToday")}
+      </Link>
+
+      {status && <DailyChallengeWeekCard status={status} />}
 
       <ul className="grid grid-cols-2 gap-2.5">
         <li className={RULE_TILE}>
@@ -69,7 +92,7 @@ export function DailyChallengeExplainer() {
           <span className="text-xs text-muted-foreground">{t("daily.ruleSameSub")}</span>
         </li>
         <li className={RULE_TILE}>
-          <span className="font-heading text-3xl leading-none font-extrabold text-[#ffb547]" aria-hidden="true">1</span>
+          <span className="font-heading text-3xl leading-none font-extrabold text-[#ffb547]" aria-hidden="true">{runs?.max ?? 3}</span>
           <span className="leading-tight font-extrabold">{t("daily.ruleOne")}</span>
           <span className="text-xs text-muted-foreground">{t("daily.ruleOneSub")}</span>
         </li>
@@ -104,9 +127,8 @@ export function DailyChallengeExplainer() {
 
       {streak >= 2 && <PushReminderToggle onlyOffer enableLabel={t("push.streakPrompt")} />}
 
-      <Link href={Routes.PLAY_DAILY} className={`${theme.button} h-16 text-[23px] [&_svg]:size-6`}>
-        <PlayIcon className="fill-current" aria-hidden="true" />
-        {t(played ? "daily.practice" : "daily.playToday")}
+      <Link href={Routes.LEADERBOARD} className="text-center text-sm font-semibold text-muted-foreground underline underline-offset-2 hover:text-foreground">
+        {t("leaderboard.view")}
       </Link>
     </div>
   )

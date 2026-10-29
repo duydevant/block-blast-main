@@ -15,7 +15,6 @@ import { useLastGameRewardsStore } from "@/modules/progression/last-game-rewards
 import { findLevel, type LevelDefinition, levelGoalProgress, starsForLevel } from "../level-catalog"
 import { startLevelGame } from "../start-variant-game"
 
-const NOTE = "text-xs text-violet-200/80"
 const NOTE_LINK = "underline underline-offset-2 hover:text-white"
 const CHIP = "rounded-full bg-[#1b3a66] px-2.5 py-1 text-[13px] font-bold"
 const SMALL_BUTTON =
@@ -41,20 +40,6 @@ export function LevelStarsRow({ stars }: { stars: number }) {
         />
       ))}
     </span>
-  )
-}
-
-/** Ghi chú cuối hộp hết ván cho sự kiện (màn chơi có bảng kết quả riêng, đấu 1v1 có bảng trận riêng). */
-export function VariantGameOverNote() {
-  const { t } = useI18n()
-  const run = useBlockPuzzleGameStore((state) => state.variantRun)
-  if (!run || run.kind !== "event") return null
-  return (
-    <p className={NOTE}>
-      <Link href={Routes.EVENT} className={NOTE_LINK}>
-        {t("event.goals")}
-      </Link>
-    </p>
   )
 }
 

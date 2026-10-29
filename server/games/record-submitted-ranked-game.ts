@@ -5,10 +5,11 @@ import { FieldValue, type Firestore } from "firebase-admin/firestore"
 import { replayRecordedGame, type RecordedGameAction } from "@/modules/block-puzzle/engine/replay-recorded-game-actions"
 import { NO_GAME_REWARDS, type SubmitRankedGameResponse } from "@/modules/player-profile/player-profile-types"
 import { findLevel, starsForLevel } from "@/modules/game-modes/level-catalog"
+import { withRecentBest } from "@/modules/progression/daily-challenge-goals"
 import { dailyMissionProgressSchema } from "@/modules/progression/daily-mission-catalog"
 import { advanceDailyStreak } from "@/server/daily/advance-daily-streak"
+import { dailyRunOutcome, readDailyRunContext, releaseDailyRun, writeDailyRunResult } from "@/server/daily/apply-daily-run-result"
 import { dayKeyFor } from "@/server/daily/daily-challenge-calendar"
-import { dailyRunCounts } from "@/server/daily/daily-run-counts"
 import { getAdminFirestore } from "@/server/firebase/firebase-admin-app"
 import { HttpError } from "@/server/http/authenticated-json-route"
 import { boardIdsForRankedGame } from "@/server/leaderboards/leaderboard-board-ids"
@@ -16,7 +17,6 @@ import { leaderboardRef, parseLeaderboardTop } from "@/server/leaderboards/leade
 import { mergeScoreIntoTopList } from "@/server/leaderboards/merge-score-into-top-list"
 import { applyProgressionForVerifiedGame, referralIsDue } from "@/server/progression/apply-progression-for-verified-game"
 import {
-  DAILY_RESULTS_SUBCOLLECTION,
   GAME_SESSIONS_COLLECTION,
   LEADERBOARD_ENTRIES_SUBCOLLECTION,
   MISSIONS_SUBCOLLECTION,
@@ -41,8 +41,8 @@ type SubmitOutcome =
 /**
  * Replay ván rồi ghi kết quả trong một transaction: thống kê, streak + kết quả daily, bảng xếp hạng.
  * Mỗi session chỉ nộp được một lần; log sai → session `rejected` và 422.
- * Daily: chỉ lượt đã giữ chỗ lúc bắt đầu (lượt đầu của ngày) và nộp chậm nhất hết ngày hôm sau mới vào
- * bảng ngày + streak (`dailyRunCounts`); lượt khác vẫn cộng thống kê.
+ * Daily: lượt đã giữ chỗ lúc bắt đầu (tối đa 3/ngày) và nộp chậm nhất hết ngày hôm sau mới tính mốc + xu, bảng ngày,
+ * tổng tuần, streak (`apply-daily-run-result`); chỉ lượt đầu vào bảng Hôm nay / Tuần / Mọi lúc. Lượt khác cộng thống kê.
  * Challenge: không vào bảng xếp hạng, chỉ ghi điểm tốt nhất vào challenges/{id}/results/{uid}.
  * Duel: chỉ cộng thống kê/thưởng; kết quả trận do server chấm từ nước đi trên RTDB (settle-duel-round).
  * Mọi chế độ: cộng XP/xu, nhiệm vụ ngày (theo ngày nộp), thành tích, quà mời bạn.
@@ -67,10 +67,14 @@ export async function recordSubmittedRankedGame(
     if (session.data.status !== "open") return { ok: false, error: new HttpError(409, "game-already-submitted") }
 
     const finishedAt = FieldValue.serverTimestamp()
-    const { mode, day, seed, stashUnlocked, challengeId, eventWeek, levelId } = session.data
-    const dailyResultRef = day ? userRef.collection(DAILY_RESULTS_SUBCOLLECTION).doc(day) : null
-    const dailyClaim = dailyResultRef ? (await tx.get(dailyResultRef)).data() : undefined
-    const countsForDaily = day !== null && dailyRunCounts({ claim: dailyClaim, gameId, day, today })
+    const { mode, day, seed, stashUnlocked, challengeId, levelId } = session.data
+    // Sự kiện tuần đã bỏ: không replay như ván thường (thiếu luật của tuần → điểm sai).
+    if (mode === "event") {
+      tx.update(sessionRef, { status: "rejected", rejectReason: "mode-retired", finishedAt })
+      return { ok: false, error: new HttpError(422, "replay-rejected") }
+    }
+    const daily = mode === "daily" && day ? await readDailyRunContext(tx, db, { uid, gameId, dayKey: day, today, now }) : null
+    const countsForDaily = daily?.counts ?? false
 
     const replay = replayRecordedGame({ seed, stashUnlocked, variant: variantForSession(session.data) }, actions)
     if (!replay.ok) {
@@ -80,14 +84,14 @@ export async function recordSubmittedRankedGame(
 
     const stored = parseStoredPlayer(userSnap.data())
     const { summary } = replay
-    // Ván bỏ ngang chưa đi nước nào: đóng session, không tính gì. Daily thì nhả chỗ giữ để chơi lại
-    // được lượt tính điểm (seed trong ngày không đổi nên mở lại không có lợi gì).
+    // Ván bỏ ngang chưa đi nước nào: đóng session, không tính gì. Daily thì trả lại lượt (seed trong ngày
+    // không đổi nên mở lại không có lợi gì).
     if (summary.moveCount === 0) {
-      if (dailyResultRef && countsForDaily) tx.delete(dailyResultRef)
+      if (daily?.counts) releaseDailyRun(tx, daily, gameId)
       tx.update(sessionRef, { status: "abandoned", finishedAt })
       return { ok: true, response: { score: 0, stats: stored.stats, improvedBoards: [], rewards: NO_GAME_REWARDS } }
     }
-    const boardIds = boardIdsForRankedGame(mode, now, day, countsForDaily, eventWeek)
+    const boardIds = boardIdsForRankedGame(mode, now, day, countsForDaily, daily?.firstRun ?? true)
     const entryRefs = boardIds.map((boardId) => leaderboardRef(db, boardId).collection(LEADERBOARD_ENTRIES_SUBCOLLECTION).doc(uid))
     const entrySnaps = entryRefs.length > 0 ? await tx.getAll(...entryRefs) : []
     const improved = boardIds.filter((_, index) => {
@@ -103,6 +107,7 @@ export async function recordSubmittedRankedGame(
 
     const stats = applyVerifiedGameToPlayerStats(stored.stats, summary)
     const streak = day && countsForDaily ? advanceDailyStreak(stored.streak, day) : stored.streak
+    const dailyOutcome = daily?.counts ? dailyRunOutcome(daily, summary.score, stored.dailyBest) : null
     const missionsRef = userRef.collection(MISSIONS_SUBCOLLECTION).doc(today)
     const inviterRef = referralIsDue(stored, summary.moveCount) && stored.referredBy ? db.collection(USERS_COLLECTION).doc(stored.referredBy) : null
     const [missionsSnap, inviterSnap] = await tx.getAll(missionsRef, ...(inviterRef ? [inviterRef] : []))
@@ -136,9 +141,11 @@ export async function recordSubmittedRankedGame(
       }
       tx.update(challengeRefs.challenge, { attempts: FieldValue.increment(1) })
     }
-    if (dailyResultRef && countsForDaily) {
-      tx.set(dailyResultRef, { status: "done", score: summary.score, moveCount: summary.moveCount, gameId, finishedAt }, { merge: true })
+    if (daily && dailyOutcome) {
+      writeDailyRunResult(tx, daily, dailyOutcome, { uid, displayName: stored.displayName, gameId, moveCount: summary.moveCount, stamp: finishedAt })
     }
+    // Xu mốc thử thách cộng chung với xu của ván (nhiệm vụ, thành tích…).
+    const dailyCoins = dailyOutcome?.reward.coins ?? 0
     tx.set(missionsRef, { progress: progression.missionProgress, updatedAt: finishedAt }, { merge: true })
     if (inviterRef && progression.inviterReward) {
       const { coins, addTheme, achievements } = progression.inviterReward
@@ -160,13 +167,21 @@ export async function recordSubmittedRankedGame(
         stashUnlocked: stored.stashUnlocked || stashEarned,
         ...(day && countsForDaily ? { streak } : {}),
         ...progression.playerFields,
+        coins: progression.playerFields.coins + dailyCoins,
+        ...(dailyOutcome ? { dailyBest: dailyOutcome.dailyBest } : {}),
         updatedAt: finishedAt,
         ...(userSnap.exists ? {} : { displayName: null, createdAt: finishedAt }),
       },
       { merge: true }
     )
+    // Điểm ngày cho phong độ các ngày sau; thay nguyên map (merge sâu sẽ giữ lại ngày cũ đã bỏ).
+    // Người chơi cũ chưa chuyển (dailyRecent thiếu) → để lượt bắt đầu sau đọc lịch sử đầy đủ, không ghi map 1 ngày.
+    if (day && dailyOutcome && stored.dailyRecent) {
+      tx.set(userRef, { dailyRecent: withRecentBest(stored.dailyRecent, day, dailyOutcome.dayBest) }, { mergeFields: ["dailyRecent"] })
+    }
     tx.update(sessionRef, { status: "done", score: summary.score, moveCount: summary.moveCount, finishedAt })
-    return { ok: true, response: { score: summary.score, stats, improvedBoards: improved, rewards: progression.rewards } }
+    const rewards = { ...progression.rewards, coins: progression.rewards.coins + dailyCoins, daily: dailyOutcome?.reward ?? null }
+    return { ok: true, response: { score: summary.score, stats, improvedBoards: improved, rewards } }
   })
 
   if (!outcome.ok) throw outcome.error

@@ -8,10 +8,10 @@ import { type PendingSubmission, parseSavedRankedGameCloudState, type RankedSess
 import { parseSavedGame } from "./saved-game-schema"
 
 /**
- * Mỗi chế độ giữ ván riêng: Vô tận, thử thách ngày, sự kiện tuần, màn chơi, thách đấu bạn bè.
+ * Mỗi chế độ giữ ván riêng: Vô tận, thử thách ngày, màn chơi, thách đấu bạn bè.
  * Đấu 1v1 không cất (ván có giờ, rời là bỏ trận).
  */
-export const GAME_MODE_SLOTS = ["endless", "daily", "event", "level", "challenge"] as const
+export const GAME_MODE_SLOTS = ["endless", "daily", "level", "challenge"] as const
 export type GameModeSlot = (typeof GAME_MODE_SLOTS)[number]
 
 /** Ván dở của một chế độ khi người chơi sang chế độ khác (đủ để chơi tiếp và nộp điểm như chưa từng rời). */

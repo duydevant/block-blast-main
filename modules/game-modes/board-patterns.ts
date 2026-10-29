@@ -1,6 +1,6 @@
 import { boardFromPattern } from "./board-pattern"
 
-/** Các bàn dựng sẵn dùng cho sự kiện tuần và màn chơi. */
+/** Các bàn dựng sẵn dùng cho màn chơi. */
 export const BOARD_PATTERNS = {
   empty: boardFromPattern(["........", "........", "........", "........", "........", "........", "........", "........"]),
   corners: boardFromPattern(["##....##", "#......#", "........", "........", "........", "........", "#......#", "##....##"]),

@@ -1,8 +1,8 @@
 "use client"
 
-import { PartyPopperIcon, TargetIcon } from "lucide-react"
+import { TargetIcon } from "lucide-react"
 
-import { type TranslationKey, useI18n } from "@/lib/i18n"
+import { useI18n } from "@/lib/i18n"
 import { useBlockPuzzleGameStore } from "@/modules/block-puzzle/store/block-puzzle-game-store"
 import { DuelOpponentStrip } from "@/modules/duel/components/duel-opponent-strip"
 
@@ -33,21 +33,12 @@ function LevelBadge({ definition }: { definition: LevelDefinition }) {
   )
 }
 
-/** Nhãn dưới HUD: sự kiện tuần / màn chơi (tiến độ + số nước còn lại) / đấu 1v1 (bàn mini của đối thủ). */
+/** Nhãn dưới HUD: màn chơi (tiến độ + số nước còn lại) / đấu 1v1 (bàn mini của đối thủ). */
 export function VariantModeBadge() {
-  const { t } = useI18n()
   const run = useBlockPuzzleGameStore((state) => state.variantRun)
   if (!run) return null
   if (run.kind === "duel") return <DuelOpponentStrip run={run} />
 
-  if (run.kind === "level") {
-    const definition = findLevel(run.levelId)
-    return definition ? <LevelBadge definition={definition} /> : null
-  }
-  return (
-    <p className={BADGE}>
-      <PartyPopperIcon className="size-3.5" aria-hidden="true" />
-      {t("event.badge", { name: t(`event.${run.ruleId}.name` as TranslationKey) })}
-    </p>
-  )
+  const definition = findLevel(run.levelId)
+  return definition ? <LevelBadge definition={definition} /> : null
 }

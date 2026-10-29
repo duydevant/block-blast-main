@@ -20,6 +20,8 @@ export interface CanvasLayout {
   stash: Rect
   /** Chỗ của nút HTML "Đổi khối" (nửa phải hàng dưới khay). */
   swapButton: Rect
+  /** Có hàng "Cất | Đổi khối" dưới khay không (đấu 1v1 thì không: hai rect trên rỗng, bàn to hơn). */
+  powerUps: boolean
   trayScale: number
 }
 
@@ -40,10 +42,13 @@ const UNITS = {
   bottomPadding: 0.25,
 } as const
 const WIDTH_UNITS = BOARD_SIZE + UNITS.sidePadding * 2
-const HEIGHT_UNITS =
-  UNITS.topPadding + BOARD_SIZE + UNITS.boardToTray + UNITS.trayHeight + UNITS.trayToActions + UNITS.actionHeight + UNITS.bottomPadding
+const BASE_HEIGHT_UNITS = UNITS.topPadding + BOARD_SIZE + UNITS.boardToTray + UNITS.trayHeight + UNITS.bottomPadding
+const ACTION_ROW_UNITS = UNITS.trayToActions + UNITS.actionHeight
+/** Rect rỗng ngoài canvas: không vẽ, không bao giờ trúng khi chạm. */
+const NO_RECT: Rect = { x: -1, y: -1, width: 0, height: 0 }
 
-export function computeLayout(cssWidth: number, cssHeight: number, devicePixelRatio = 1): CanvasLayout {
+export function computeLayout(cssWidth: number, cssHeight: number, devicePixelRatio = 1, powerUps = true): CanvasLayout {
+  const HEIGHT_UNITS = BASE_HEIGHT_UNITS + (powerUps ? ACTION_ROW_UNITS : 0)
   // Làm tròn xuống px nguyên để viền ô sắc nét.
   const cellSize = Math.max(0, Math.floor(Math.min(cssWidth / WIDTH_UNITS, cssHeight / HEIGHT_UNITS)))
   const boardSize = cellSize * BOARD_SIZE
@@ -71,8 +76,9 @@ export function computeLayout(cssWidth: number, cssHeight: number, devicePixelRa
     board,
     traySlots,
     trayPanel: { x: board.x, y: trayY, width: boardSize, height: UNITS.trayHeight * cellSize },
-    stash: { x: board.x, y: actionY, width: actionWidth, height: actionHeight },
-    swapButton: { x: board.x + boardSize - actionWidth, y: actionY, width: actionWidth, height: actionHeight },
+    stash: powerUps ? { x: board.x, y: actionY, width: actionWidth, height: actionHeight } : NO_RECT,
+    swapButton: powerUps ? { x: board.x + boardSize - actionWidth, y: actionY, width: actionWidth, height: actionHeight } : NO_RECT,
+    powerUps,
     trayScale: TRAY_PIECE_SCALE,
   }
 }

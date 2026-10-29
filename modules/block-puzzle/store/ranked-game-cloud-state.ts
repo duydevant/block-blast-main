@@ -41,7 +41,7 @@ export interface RankedGameCloudState {
   dailyDay: string | null
   /** Ván hiện tại là lượt nhận thách đấu này (so điểm ở màn hết ván). */
   challenge: ChallengeOpponent | null
-  /** Ván hiện tại thuộc sự kiện tuần / màn chơi / đấu 1v1 (biến thể + HUD riêng). */
+  /** Ván hiện tại thuộc màn chơi / đấu 1v1 (biến thể + HUD riêng). */
   variantRun: VariantRun | null
 }
 
@@ -82,7 +82,7 @@ export interface IssuedDailyStart {
 
 /**
  * Ván chưa có tiến độ gì → thay bằng ván khác không mất gì của người chơi.
- * `initialReplaceCharges`: số lượt đổi lúc đầu ván (sự kiện có thể khác mặc định).
+ * `initialReplaceCharges`: số lượt đổi lúc đầu ván (biến thể có thể khác mặc định).
  */
 export function isUntouchedGame(game: GameState | null, initialReplaceCharges: number = POWER_UP_RULES.replaceChargesPerGame): boolean {
   return Boolean(
@@ -117,7 +117,6 @@ const rankedStateSchema = z.object({
     .catch(null),
   variantRun: z
     .discriminatedUnion("kind", [
-      z.object({ kind: z.literal("event"), week: z.string().regex(/^\d{4}-W\d{2}$/), ruleId: z.string().max(32) }),
       z.object({ kind: z.literal("level"), levelId: z.number().int().min(1).max(LEVEL_COUNT) }),
       z.object({
         kind: z.literal("duel"),

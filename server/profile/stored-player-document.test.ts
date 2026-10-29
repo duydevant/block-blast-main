@@ -34,6 +34,7 @@ describe("parseStoredPlayer", () => {
       referralCount: 0,
       levelStars: {},
       duelStats: { played: 0, won: 0 },
+      dailyBest: 0,
     })
   })
 

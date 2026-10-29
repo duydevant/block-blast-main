@@ -26,11 +26,12 @@ const gameStateSchema = z.object({
   nextPieceUid: nonNegativeInt,
   stash: trayPieceSchema.nullable().optional(),
   stashUnlocked: z.boolean().optional(),
-  // Sự kiện có thể cho nhiều lượt đổi hơn mặc định.
+  // Biến thể có thể cho số lượt đổi khác mặc định.
   replaceCharges: nonNegativeInt.max(POWER_UP_RULES.replaceChargesPerGame * 5).optional(),
   reviveUsed: z.boolean().optional(),
   moveLimit: z.number().int().min(1).max(1000).optional(),
   endedEarly: z.boolean().optional(),
+  noPowerUps: z.boolean().optional(),
   linesCleared: nonNegativeInt.optional(),
   generatorState: z.union([
     z.object({

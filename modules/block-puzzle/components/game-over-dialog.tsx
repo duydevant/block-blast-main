@@ -2,15 +2,16 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { CheckIcon, CrownIcon, GiftIcon, HeartIcon, RotateCcwIcon } from "lucide-react"
+import { CheckIcon, CrownIcon, HeartIcon, RotateCcwIcon } from "lucide-react"
 
-import { CHUNKY_BUTTON, MODE_THEME } from "@/components/game-ui/game-ui-classes"
+import { CHUNKY_BUTTON } from "@/components/game-ui/game-ui-classes"
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useFirebaseAuthStore } from "@/lib/auth/firebase-auth-store"
 import { useI18n } from "@/lib/i18n"
 import { Routes } from "@/lib/routes"
-import { LevelResultPanel, useLevelOutcome, VariantGameOverNote } from "@/modules/game-modes/components/game-over-variant-section"
+import { LevelResultPanel, useLevelOutcome } from "@/modules/game-modes/components/game-over-variant-section"
 import { usePlayerProfileQuery } from "@/modules/player-profile/use-player-profile-query"
+import { DailyRunGameOverNote, useDailyNewGameLabel } from "@/modules/progression/components/daily-run-game-over-note"
 import { useLastGameRewardsStore } from "@/modules/progression/last-game-rewards-store"
 import { InstallAppButton } from "@/modules/pwa/components/install-app-button"
 
@@ -33,7 +34,8 @@ function GameOverCloudNote({ score }: { score: number }) {
   const challenge = useBlockPuzzleGameStore((state) => state.challenge)
   const hasVariantRun = useBlockPuzzleGameStore((state) => state.variantRun !== null)
   const cloudEnabled = useFirebaseAuthStore((state) => state.status !== "disabled")
-  if (hasVariantRun) return <VariantGameOverNote />
+  // Màn chơi có bảng kết quả riêng, đấu 1v1 có bảng trận riêng.
+  if (hasVariantRun) return null
   if (!cloudEnabled) return null
 
   if (challenge) {
@@ -58,15 +60,9 @@ function GameOverCloudNote({ score }: { score: number }) {
       </p>
     )
   }
-  // Lượt daily tính điểm xong → mời sang /daily nhận thưởng chuỗi (server cấp khi ván đã nộp).
-  if (isDaily && isRanked) {
-    return (
-      <Link href={Routes.DAILY} className={`${MODE_THEME.daily.button} h-12 w-full text-lg`}>
-        <GiftIcon aria-hidden="true" />
-        {t("reward.claimToday")}
-      </Link>
-    )
-  }
+  // Lượt daily tính điểm: sao / kỷ lục vừa đạt + mời sang /daily (mục tiêu, rương tuần, thưởng chuỗi).
+  if (isDaily && isRanked) return <DailyRunGameOverNote />
+
   const status = isDaily ? "daily.gameOverPractice" : "game.offlineNotCounted"
   return <p className={NOTE}>{t(status)}</p>
 }
@@ -95,13 +91,14 @@ export function GameOverDialog() {
   const { t, formatNumber } = useI18n()
   const game = useBlockPuzzleGameStore((state) => state.game)
   const best = useBlockPuzzleGameStore((state) => state.best)
-  // "Ván mới" = ván mới của chính chế độ đang chơi (sự kiện → sự kiện…), không nhảy sang Vô tận.
+  // "Ván mới" = ván mới của chính chế độ đang chơi (thử thách → lượt tiếp, màn → chơi lại…), không nhảy sang Vô tận.
   const startNewGame = useRestartCurrentMode()
   const revive = useBlockPuzzleGameStore((state) => state.revive)
   // Ván đã nộp (VD vừa tạo thách đấu) thì hồi sinh không còn được tính → ẩn.
   const submitted = useBlockPuzzleGameStore((state) => state.rankedSession?.queued ?? false)
   const [revealedKey, setRevealedKey] = useState<string | null>(null)
   const level = useLevelOutcome()
+  const newGameLabel = useDailyNewGameLabel()
 
   // Key riêng cho từng lần game over để ván mới không thừa hưởng trạng thái đã hiện.
   const gameOverKey = game?.isGameOver ? `${game.nextPieceUid}:${game.moveCount}:${game.score}` : null
@@ -148,7 +145,7 @@ export function GameOverDialog() {
             )}
             <button className={`${CHUNKY_BUTTON.primary} h-[60px] w-full text-[22px]`} onClick={startNewGame}>
               <RotateCcwIcon aria-hidden="true" />
-              {t("game.newGame")}
+              {newGameLabel ?? t("game.newGame")}
             </button>
             <GameOverShareActions />
             <GameOverInstallOffer />

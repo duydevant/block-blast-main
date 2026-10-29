@@ -26,7 +26,6 @@ const ERRORS: Record<SpecialMode["kind"], { offline: TranslationKey; failed: Tra
   endless: { offline: "game.endlessFailed", failed: "game.endlessFailed" },
   daily: { offline: "daily.needsOnline", failed: "daily.startFailed" },
   challenge: { offline: "challenge.needsOnline", failed: "challenge.startFailed" },
-  event: { offline: "event.needsOnline", failed: "event.startFailed" },
   level: { offline: "levels.startFailed", failed: "levels.startFailed" },
   duel: { offline: "duel.needsOnline", failed: "duel.startFailed" },
 }

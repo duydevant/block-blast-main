@@ -73,7 +73,7 @@ export function challengeGameState(state: GameStoreSnapshot, start: IssuedChalle
   }
 }
 
-/** Sự kiện tuần / màn chơi / đấu 1v1: biến thể lấy từ catalog theo chế độ, ô cất khoá như daily. */
+/** Màn chơi / đấu 1v1: biến thể lấy từ catalog theo chế độ, ô cất khoá như daily. */
 export function variantGameState(state: GameStoreSnapshot, start: IssuedVariantStart): GameStorePatch {
   return {
     game: createRankedGameStartState({ seed: start.seed, stashUnlocked: false, variant: variantForRun(start.run) }),

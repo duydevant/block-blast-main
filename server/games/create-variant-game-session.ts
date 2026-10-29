@@ -1,12 +1,9 @@
 import "server-only"
 
-import { randomInt } from "node:crypto"
-
 import type { DocumentReference } from "firebase-admin/firestore"
 
 import { findLevel } from "@/modules/game-modes/level-catalog"
 import type { StartRankedGameResponse } from "@/modules/player-profile/player-profile-types"
-import { currentWeeklyEvent } from "@/server/daily/current-weekly-event"
 import { DUEL_EARLY_START_TOLERANCE_MS } from "@/modules/duel/duel-types"
 import { DUEL_RTDB_PATH, duelRoundKey } from "@/modules/duel/duel-types"
 import { duelRef, mirrorDuelState, parseDuel, toDuelState, writeDuel } from "@/server/duels/duel-documents"
@@ -17,17 +14,6 @@ import { parseStoredPlayer, USERS_COLLECTION } from "@/server/profile/stored-pla
 
 /** Field chung của doc gameSessions (mode, seed, hạn…) do create-ranked-game-session dựng. */
 type SessionFields = (seed: number, extra: Record<string, unknown>) => Record<string, unknown>
-
-/**
- * Sự kiện tuần: seed ngẫu nhiên, luật của tuần hiện tại (lưu tuần + luật vào session để replay đúng
- * kể cả khi nộp sang tuần sau). Ô cất khoá như daily để bảng sự kiện công bằng.
- */
-export async function createEventSession(sessionRef: DocumentReference, fields: SessionFields): Promise<StartRankedGameResponse> {
-  const event = currentWeeklyEvent(new Date())
-  const seed = randomInt(0, 0x1_0000_0000)
-  await sessionRef.set(fields(seed, { eventWeek: event.week, eventRuleId: event.ruleId }))
-  return { gameId: sessionRef.id, seed, stashUnlocked: false, mode: "event", day: null, challenge: null, event }
-}
 
 /**
  * Màn chơi: seed + bàn cố định theo màn (mọi người cùng một câu đố). Màn chỉ mở (được thưởng) khi server

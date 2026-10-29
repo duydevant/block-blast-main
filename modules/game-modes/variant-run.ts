@@ -2,11 +2,9 @@ import type { GameVariant } from "@/modules/block-puzzle/engine/game-types"
 import type { DuelPlayer } from "@/modules/duel/duel-types"
 
 import { findLevel, levelVariant } from "./level-catalog"
-import { findEventRule } from "./weekly-event-catalog"
 
 /** Ván hiện tại thuộc chế độ đặc biệt nào (lưu trong save, quyết định biến thể + HUD). */
 export type VariantRun =
-  | { kind: "event"; week: string; ruleId: string }
   | { kind: "level"; levelId: number }
   | {
       kind: "duel"
@@ -21,12 +19,11 @@ export type VariantRun =
       clockOffset: number
     }
 
-/** Đấu 1v1: bàn thường, không hồi sinh (chết là dừng, chờ kết quả). */
-export const DUEL_VARIANT: GameVariant = { noRevive: true }
+/** Đấu 1v1: bàn thường, không hồi sinh (chết là dừng, chờ kết quả), không cất / đổi khối. */
+export const DUEL_VARIANT: GameVariant = { noRevive: true, noPowerUps: true }
 
 /** Biến thể ván theo chế độ; id lạ (save cũ/bị sửa) → undefined = ván thường. */
-export function variantForRun(run: { kind: "event"; ruleId: string } | { kind: "level"; levelId: number } | { kind: "duel" }): GameVariant | undefined {
-  if (run.kind === "event") return findEventRule(run.ruleId)?.variant
+export function variantForRun(run: { kind: "level"; levelId: number } | { kind: "duel" }): GameVariant | undefined {
   if (run.kind === "level") {
     const definition = findLevel(run.levelId)
     return definition ? levelVariant(definition) : undefined

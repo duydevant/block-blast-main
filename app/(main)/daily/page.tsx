@@ -5,7 +5,7 @@ import { DailyChallengeExplainer } from "@/modules/leaderboard/components/daily-
 
 export const metadata: Metadata = {
   title: "Daily challenge",
-  description: "Everyone plays the same blocks today. Only your first run counts — keep your streak and climb today's leaderboard.",
+  description: "Everyone plays the same blocks today. 3 runs, best one counts: beat your personal goals, keep your streak and race the weekly total.",
   alternates: { canonical: Routes.DAILY },
 }
 

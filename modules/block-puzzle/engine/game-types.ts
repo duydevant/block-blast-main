@@ -75,13 +75,15 @@ export interface GameState {
   moveLimit?: number
   /** Ván bị chốt khi vẫn còn chỗ đặt (đấu 1v1 hết giờ / bỏ trận): tải lại save vẫn là hết ván. */
   endedEarly?: boolean
+  /** Ván không có "Cất" / "Đổi khối" (đấu 1v1): giao diện ẩn hai nút, reducer từ chối hai thao tác này. */
+  noPowerUps?: boolean
   /** Tổng số hàng + cột đã xoá trong ván (mục tiêu màn chơi). */
   linesCleared?: number
   lastMove: MoveResult | null
 }
 
 /**
- * Biến thể ván (sự kiện tuần, màn chơi): luôn suy ra từ catalog dùng chung ở cả client và server,
+ * Biến thể ván (màn chơi, đấu 1v1): luôn suy ra từ catalog dùng chung ở cả client và server,
  * không bao giờ nhận từ client, để replay ra đúng ván người chơi đã thấy.
  */
 export interface GameVariant {
@@ -91,6 +93,8 @@ export interface GameVariant {
   replaceCharges?: number
   /** Không có hồi sinh (đấu 1v1): ván bắt đầu như đã dùng lượt hồi sinh. */
   noRevive?: boolean
+  /** Không có ô "Cất" và nút "Đổi khối" (đấu 1v1). */
+  noPowerUps?: boolean
 }
 
 export type GameAction =

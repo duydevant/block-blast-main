@@ -39,7 +39,8 @@ export function LeaderboardPageClient({
         ))}
       </div>
 
-      {(status === "error" || status === "disabled") && <p className="text-sm text-muted-foreground">{t("auth.unavailable")}</p>}
+      {period === "challenge" && <p className="text-xs text-muted-foreground">{t("leaderboard.challengeHint")}</p>}
+      {(status === "error" || status === "disabled") &&<p className="text-sm text-muted-foreground">{t("auth.unavailable")}</p>}
       <LeaderboardTable period={period} initialTop={initialTops[period]} />
     </div>
   )

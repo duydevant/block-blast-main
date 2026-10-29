@@ -10,7 +10,7 @@ import { effectiveDailyStreak } from "@/server/daily/advance-daily-streak"
 /** Tên collection Firestore — dùng chung cho mọi chỗ đọc/ghi. */
 export const USERS_COLLECTION = "users"
 export const GAME_SESSIONS_COLLECTION = "gameSessions"
-/** users/{uid}/daily/{YYYYMMDD}: kết quả lượt tính điểm của thử thách ngày đó. */
+/** users/{uid}/daily/{YYYYMMDD}: các lượt tính điểm, mốc, điểm cao nhất + sao của thử thách ngày đó. */
 export const DAILY_RESULTS_SUBCOLLECTION = "daily"
 /** leaderboards/{boardId} (snapshot top) và leaderboards/{boardId}/entries/{uid}. */
 export const LEADERBOARDS_COLLECTION = "leaderboards"
@@ -55,6 +55,10 @@ const storedPlayerSchema = z.object({
   /** Màn chơi → số sao cao nhất (chỉ giữ giá trị 1–3 hợp lệ). */
   levelStars: z.record(z.string().regex(/^\d{1,3}$/), z.number().int().min(1).max(3)).catch({}),
   duelStats: z.object({ played: count, won: count }).catch({ played: 0, won: 0 }),
+  /** Điểm thử thách ngày cao nhất mọi thời điểm (mốc "Kỷ lục" của thử thách). */
+  dailyBest: count,
+  /** Điểm cao nhất các ngày thử thách gần đây (tính phong độ). Thiếu = người chơi cũ chưa chuyển, đọc lịch sử một lần. */
+  dailyRecent: z.record(z.string().regex(/^\d{8}$/), z.number().int().nonnegative()).optional().catch(undefined),
 })
 
 /** Field người dùng được ghi trong users/{uid}; doc thiếu/hỏng field nào thì field đó về mặc định. */
@@ -76,6 +80,7 @@ const EMPTY_STORED_PLAYER: StoredPlayer = {
   referralCount: 0,
   levelStars: {},
   duelStats: { played: 0, won: 0 },
+  dailyBest: 0,
 }
 
 export function parseStoredPlayer(data: unknown): StoredPlayer {

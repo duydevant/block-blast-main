@@ -1,18 +1,8 @@
-import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 
 import { Routes } from "@/lib/routes"
-import { WeeklyEventPage } from "@/modules/game-modes/components/weekly-event-page"
 
-export const metadata: Metadata = {
-  title: "Weekly event",
-  description: "A new rule every week: hit score goals for coins and climb the event leaderboard for weekly rewards.",
-  alternates: { canonical: Routes.EVENT },
-}
-
+/** Sự kiện tuần đã gộp vào thử thách ngày (mốc + bảng tổng tuần) → link cũ chuyển sang /daily. */
 export default function EventPage() {
-  return (
-    <div className="mx-auto w-full max-w-md px-4 pt-2 pb-6">
-      <WeeklyEventPage />
-    </div>
-  )
+  redirect(Routes.DAILY)
 }

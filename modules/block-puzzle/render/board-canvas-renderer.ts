@@ -185,7 +185,7 @@ export function renderFrame(ctx: CanvasRenderingContext2D, layout: CanvasLayout,
 
   drawBoard(ctx, layout, view)
   drawTray(ctx, layout, view)
-  drawStash(ctx, layout, view)
+  if (layout.powerUps) drawStash(ctx, layout, view)
   drawEffects(ctx, layout, view.effects, view.now)
   drawDraggedPiece(ctx, layout, view)
 }

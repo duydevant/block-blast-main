@@ -14,7 +14,7 @@ export interface RankedGameStart {
   seed: number
   /** Ô cất mở sẵn từ các ván trước; phải khớp đúng giữa client và server. */
   stashUnlocked: boolean
-  /** Sự kiện / màn chơi; server lấy từ catalog theo mode của session. */
+  /** Màn chơi / đấu 1v1; server lấy từ catalog theo mode của session. */
   variant?: GameVariant
 }
 

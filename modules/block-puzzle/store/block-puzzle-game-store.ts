@@ -44,7 +44,7 @@ interface BlockPuzzleGameStore extends RankedGameCloudState {
   startDailyGame: (start: IssuedDailyStart) => void
   /** Kết thúc ván hiện tại và vào lượt nhận thách đấu. */
   startChallengeGame: (start: IssuedChallengeStart) => void
-  /** Kết thúc ván hiện tại và vào sự kiện tuần / màn chơi / đấu 1v1. */
+  /** Kết thúc ván hiện tại và vào màn chơi / đấu 1v1. */
   startVariantGame: (start: IssuedVariantStart) => void
   /** Chốt ván chế độ đặc biệt (hết giờ đấu, qua màn): hết ván, không hồi sinh → sync tự nộp. */
   endVariantRun: () => void

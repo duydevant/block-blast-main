@@ -1,12 +1,11 @@
 import { previousDayKey } from "./daily-challenge-calendar"
 
 /**
- * Lượt daily có được tính (bảng ngày + streak) không:
- * - phải là lượt đã giữ chỗ lúc bắt đầu (claim.gameId khớp, chưa nộp xong),
+ * Lượt daily có được tính (mốc, bảng ngày, tổng tuần, streak) không:
+ * - phải là một trong các lượt đã giữ chỗ lúc bắt đầu (gameId nằm trong `runs`) và chưa nộp,
  * - nộp chậm nhất hết ngày hôm sau (cho phép offline qua đêm); quá hạn thì chỉ cộng thống kê.
  */
-export function dailyRunCounts(input: { claim: unknown; gameId: string; day: string; today: string }): boolean {
+export function dailyRunCounts(input: { runs: readonly string[]; finished: readonly string[]; gameId: string; day: string; today: string }): boolean {
   if (input.day !== input.today && input.day !== previousDayKey(input.today)) return false
-  const claim = input.claim as { gameId?: unknown; status?: unknown } | undefined
-  return claim?.gameId === input.gameId && claim.status === "started"
+  return input.runs.includes(input.gameId) && !input.finished.includes(input.gameId)
 }

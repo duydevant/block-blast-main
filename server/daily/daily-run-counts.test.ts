@@ -4,21 +4,18 @@ import { advanceDailyStreak } from "./advance-daily-streak"
 import { dailyRunCounts } from "./daily-run-counts"
 
 describe("dailyRunCounts", () => {
-  const claim = { gameId: "g1", status: "started" }
+  const day = { runs: ["g1", "g2"], finished: ["g1"] }
 
-  it("counts only the run that claimed the day when it started", () => {
-    expect(dailyRunCounts({ claim, gameId: "g1", day: "20261027", today: "20261027" })).toBe(true)
-    expect(dailyRunCounts({ claim, gameId: "g2", day: "20261027", today: "20261027" })).toBe(false)
-  })
-
-  it("does not count a run once the day's result is recorded or when nothing was claimed", () => {
-    expect(dailyRunCounts({ claim: { ...claim, status: "done" }, gameId: "g1", day: "20261027", today: "20261027" })).toBe(false)
-    expect(dailyRunCounts({ claim: undefined, gameId: "g1", day: "20261027", today: "20261027" })).toBe(false)
+  it("counts only runs that reserved a slot when they started, once each", () => {
+    expect(dailyRunCounts({ ...day, gameId: "g2", day: "20261027", today: "20261027" })).toBe(true)
+    expect(dailyRunCounts({ ...day, gameId: "g1", day: "20261027", today: "20261027" })).toBe(false)
+    expect(dailyRunCounts({ ...day, gameId: "g9", day: "20261027", today: "20261027" })).toBe(false)
+    expect(dailyRunCounts({ runs: [], finished: [], gameId: "g1", day: "20261027", today: "20261027" })).toBe(false)
   })
 
   it("accepts a submission until the end of the next day only", () => {
-    expect(dailyRunCounts({ claim, gameId: "g1", day: "20261027", today: "20261028" })).toBe(true)
-    expect(dailyRunCounts({ claim, gameId: "g1", day: "20261027", today: "20261029" })).toBe(false)
+    expect(dailyRunCounts({ ...day, gameId: "g2", day: "20261027", today: "20261028" })).toBe(true)
+    expect(dailyRunCounts({ ...day, gameId: "g2", day: "20261027", today: "20261029" })).toBe(false)
   })
 })
 

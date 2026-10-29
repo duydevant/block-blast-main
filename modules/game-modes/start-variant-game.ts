@@ -15,20 +15,6 @@ async function requestStart(uid: string, body: Record<string, unknown>): Promise
   return fetchJsonWithFirebaseIdToken<StartRankedGameResponse>(ApiRoutes.GAMES_START, { method: "POST", body, expectedUid: uid })
 }
 
-/** Sự kiện tuần: server cấp seed + luật của tuần (cần mạng). */
-export async function startWeeklyEventGame(): Promise<void> {
-  const uid = signedInUid()
-  if (!uid) throw new Error("not-signed-in")
-  const issued = await requestStart(uid, { mode: "event" })
-  if (issued.mode !== "event" || !issued.gameId || !issued.event) throw new Error("unexpected-event-start")
-  useBlockPuzzleGameStore.getState().startVariantGame({
-    gameId: issued.gameId,
-    uid,
-    seed: issued.seed,
-    run: { kind: "event", week: issued.event.week, ruleId: issued.event.ruleId },
-  })
-}
-
 /**
  * Màn chơi: có mạng thì xin session để server xác nhận sao/thưởng xu; không có thì vẫn chơi offline
  * (seed + bàn của màn có sẵn trong catalog, chỉ lưu sao trên máy).

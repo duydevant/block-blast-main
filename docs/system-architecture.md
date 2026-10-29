@@ -23,15 +23,15 @@ providers/     — React Query, Firebase Auth và các provider gốc.
 
 - Client **không** đọc/ghi Firestore trực tiếp: `firestore.rules` và `database.rules.json` chặn hết. Mọi truy cập qua API route dùng Admin SDK (`server/firebase/firebase-admin-app.ts`).
 - API (đều cần `Authorization: Bearer <Firebase ID token>`, uid lấy từ token):
-  - `POST /api/games/start { mode: "classic" | "daily" }` → `{ gameId, seed, stashUnlocked, mode, day }`. Daily đã có lượt tính điểm hôm nay → `gameId: null` (luyện tập, không nộp).
-  - `POST /api/games/submit { gameId, actions[] }` → transaction: session phải `open` + đúng uid → `replayRecordedGame` → ghi `stats`, bảng xếp hạng, (daily lượt đầu) kết quả ngày + `streak`, session `done`. Log sai → 422 + session `rejected`; nộp lại → 409.
-  - `GET /api/daily` → `{ day, todayScore, runInProgress, streak, missions }`.
+  - `POST /api/games/start { mode: "classic" | "daily" }` → `{ gameId, seed, stashUnlocked, mode, day }`. Daily đã dùng hết 3 lượt tính điểm hôm nay → `gameId: null` (luyện tập, không nộp).
+  - `POST /api/games/submit { gameId, actions[] }` → transaction: session phải `open` + đúng uid → `replayRecordedGame` → ghi `stats`, bảng xếp hạng, (daily lượt tính điểm) kết quả ngày + mốc/xu + tổng tuần + `streak`, session `done`. Log sai → 422 + session `rejected`; nộp lại → 409.
+  - `GET /api/daily` → `{ day, todayScore, runInProgress, runs, goals, yesterdayScore, stars, recordBroken, week, previousWeek, streak, reward, missions }`; `POST /api/daily/week-claim { week, kind: "chest", index } | { week, kind: "rank" }`.
   - `POST /api/shop/themes { themeId }` → mua theme bằng xu (409 `not-enough-coins` / `theme-owned`), trả profile.
   - `POST/DELETE /api/push/subscriptions` → bật/tắt nhắc nhở; `GET /api/presence` (công khai) → `{ playing }`; `GET|POST /api/cron/daily-reminders` (Bearer `CRON_SECRET`).
-  - `POST /api/games/start` còn nhận `mode: "event" | "level" (levelId) | "duel" (duelId)`; `POST /api/duels`, `POST /api/duels/{id}/join`, `POST /api/duels/{id}/settle`, `POST /api/duels/{id}/ready { ready }`, `GET /api/duels/{id}` (công khai, chốt ván quá hạn).
+  - `POST /api/games/start` còn nhận `mode: "level" (levelId) | "duel" (duelId)`; `POST /api/duels`, `POST /api/duels/{id}/join`, `POST /api/duels/{id}/settle`, `POST /api/duels/{id}/ready { ready }`, `GET /api/duels/{id}` (công khai, chốt ván quá hạn).
   - `GET /api/referral` → `{ code, referralCount }` (tạo mã lần đầu); `POST /api/referral/claim { code }` → gắn người mời.
   - `POST /api/challenges { gameId, actions? }` → `{ challengeId }`; `GET /api/challenges/{id}` (công khai).
-  - `GET /api/leaderboards/{daily|weekly|alltime}` → bảng hiện hành `{ boardId, top, me: { rank, score, nextScore } }`.
+  - `GET /api/leaderboards/{today|weekly|challenge|alltime|daily}` → bảng hiện hành `{ boardId, top, me: { rank, score, nextScore } }`.
   - `GET/PATCH /api/profile` → profile (kèm `streak`); PATCH chỉ đổi `displayName` (2–16 ký tự), cập nhật tên trên các bảng hiện hành.
 - Thiếu env Firebase → `status: "disabled"`, game chạy offline như cũ.
 
@@ -39,9 +39,11 @@ providers/     — React Query, Firebase Auth và các provider gốc.
 
 - Ngày/tuần theo giờ VN (UTC+7, tuần ISO bắt đầu thứ Hai) — `server/daily/daily-challenge-calendar.ts`.
 - Seed ngày = `HMAC(DAILY_SEED_SECRET, ngày)` → mọi người cùng chuỗi khối, không đoán trước ngày mai. Ô cất luôn khoá ở daily.
-- Chỉ **lượt nộp đầu tiên** của ngày lên bảng thử thách ngày + tính streak (`users/{uid}/daily/{day}` đánh dấu, kiểm tra trong transaction). Lượt sau vẫn cộng thống kê.
+- **3 lượt tính điểm/ngày**, giữ chỗ lúc bắt đầu (`users/{uid}/daily/{day}.runs`, `server/daily/start-daily-run.ts`); hết lượt → luyện tập. Lượt cao nhất tính cho mốc, bảng ngày, tổng tuần; ván 0 nước trả lại lượt.
+- **Mốc cá nhân** (`modules/progression/daily-challenge-goals.ts`): phong độ = trung vị điểm cao nhất 7 ngày gần nhất có chơi (`users.dailyRecent`, mặc định 1500) → ★/★★/★★★ = 70/110/150% (làm tròn 50) + 🏆 vượt `users.dailyBest`. Mốc chốt ở lượt đầu (`daily/{day}.goals`). Xu mốc (20/40/80, kỷ lục 100) cộng ngay khi nộp, mỗi mốc 1 lần/ngày (`apply-daily-run-result.ts`).
+- **Thử thách tuần**: bảng `challenge-week-YYYY-Www` = tổng điểm cao nhất từng ngày (entry += phần điểm ngày tăng thêm; tuần của ngày thử thách, nhận nộp trễ 1 giờ sau khi tuần kết thúc). Sao tuần (≤ 21) mở rương 10★ = 150 xu, 18★ = 400 xu; thưởng hạng (top 1/3/10/100 + tham gia) nhận tuần sau, hạng tính bằng `count()` trên bảng đã chốt. Đánh dấu `users/{uid}/dailyWeeks/{week}` (`daily-week-rewards-store.ts`).
 - Streak: +1 nếu hôm qua có lượt daily, không thì về 1; hiển thị 0 khi đã đứt (quá hết ngày hôm sau).
-- Bảng: hôm nay ⊂ tuần ⊂ mọi lúc (cùng tập ván: Vô tận + lượt daily tính điểm). classic → `today-YYYYMMDD` (ngày nộp) + `weekly-YYYY-Www` + `alltime` + `event-YYYY-Www` tuần này; daily (lượt tính điểm) → `daily-YYYYMMDD` (bảng riêng thử thách, trang /daily) + hôm nay + tuần + mọi lúc. Tab /leaderboard: hôm nay, tuần, sự kiện, mọi lúc. Mỗi bảng: entries (điểm tốt nhất/uid) + doc snapshot top 100 cập nhật trong cùng transaction → mở bảng = 2 lượt đọc (ngoài top 100 thêm `count()` + 1 truy vấn).
+- Bảng: hôm nay ⊂ tuần ⊂ mọi lúc (cùng tập ván: Vô tận + lượt daily tính điểm). classic → `today-YYYYMMDD` (ngày nộp) + `weekly-YYYY-Www` + `alltime`; daily (lượt tính điểm) → `daily-YYYYMMDD` (bảng riêng thử thách, giữ lượt cao nhất); chỉ **lượt đầu** của ngày thêm hôm nay + tuần + mọi lúc (lượt 2, 3 đã biết bộ khối). Tab /leaderboard: hôm nay, tuần, thử thách (tổng tuần), mọi lúc. Mỗi bảng: entries (điểm tốt nhất/uid) + doc snapshot top 100 cập nhật trong cùng transaction → mở bảng = 2 lượt đọc (ngoài top 100 thêm `count()` + 1 truy vấn).
 - Đồng điểm thì đồng hạng (hạng = số người điểm cao hơn + 1).
 - Client: `start-daily-challenge.ts` xin seed → `store.startDailyGame` (`dailyDay` đánh dấu ván daily; sync không bao giờ thay ván daily bằng seed classic). Vào từ menu game hoặc link `/play?daily=1` (trang chủ).
 
@@ -72,23 +74,23 @@ providers/     — React Query, Firebase Auth và các provider gốc.
 
 ### Sự kiện tuần, màn chơi, đấu 1v1
 
-- Các chế độ độc lập (`modules/block-puzzle/special-game-modes.ts`, `store/parked-mode-games.ts`): mỗi chế độ (Vô tận, thử thách ngày, sự kiện, màn chơi, thách đấu) giữ một ván dở trong `parkedGames` của save. Vào chế độ khác → cất ván đang chơi (không nộp), lấy ván dở của chế độ đích nếu còn đúng ngày / tuần / màn / thách đấu, không thì xin ván mới (ván cất cũ bị bỏ thì nộp phần đã chơi). Màn chơi hiện "đang tải" trong lúc chuyển. Nút Play chung = `/play?endless=1`; "Ván mới" = ván mới cùng chế độ. Đấu 1v1 không cất (rời = bỏ trận, có hỏi).
+- Các chế độ độc lập (`modules/block-puzzle/special-game-modes.ts`, `store/parked-mode-games.ts`): mỗi chế độ (Vô tận, thử thách ngày, màn chơi, thách đấu) giữ một ván dở trong `parkedGames` của save. Vào chế độ khác → cất ván đang chơi (không nộp), lấy ván dở của chế độ đích nếu còn đúng ngày / màn / thách đấu, không thì xin ván mới (ván cất cũ bị bỏ thì nộp phần đã chơi). Màn chơi hiện "đang tải" trong lúc chuyển. Nút Play chung = `/play?endless=1`; "Ván mới" = ván mới cùng chế độ. Đấu 1v1 không cất (rời = bỏ trận, có hỏi).
 
 - Engine: `createNewGame(seed, variant)` với `GameVariant { startBoard, moveLimit, replaceCharges }`; `moveLimit` hết = hết ván (không hồi sinh vượt); `linesCleared` đếm trong state. Biến thể **luôn** suy từ catalog (`modules/game-modes/`) theo mode + id lưu trong session — client không gửi biến thể.
-- Sự kiện tuần: luật xoay vòng theo tuần ISO (`weekly-event-catalog.ts`), session lưu `eventWeek`/`eventRuleId`, bảng `event-YYYY-Www` (tab "Sự kiện tuần", nhận cả ván Vô tận trong tuần), ô cất khoá.
+- Sự kiện tuần đã gộp vào thử thách ngày (2026-10-29): `/event` chuyển về `/daily`; session `mode: "event"` cũ nộp lên bị từ chối (`mode-retired`).
 - Màn chơi: 20 màn (`level-catalog.ts`) seed + bàn cố định, mục tiêu điểm/dòng + giới hạn nước; seed/giới hạn chọn bằng bot và test bot giải được từng màn. Đạt mục tiêu → client chốt ván (`endVariantRun`) → server replay tính sao (≤60% nước = 3 sao, ≤80% = 2), `users.levelStars`, 20 xu mỗi sao mới. Chơi offline được (sao lưu local, `level-progress-store`).
 - Đấu 1v1 (phòng nhiều ván, cùng mã):
-  - `POST /api/duels` tạo phòng → link/mã `/duel/{code}` → người kia `join` → ván 1: đếm ngược 5s, 3 phút (giờ server). Mỗi người xin 1 session `mode: "duel"` mỗi ván (cùng seed, `DUEL_VARIANT` = không hồi sinh).
+  - `POST /api/duels` tạo phòng → link/mã `/duel/{code}` → người kia `join` → ván 1: đếm ngược 5s, 3 phút (giờ server). Mỗi người xin 1 session `mode: "duel"` mỗi ván (cùng seed, `DUEL_VARIANT` = không hồi sinh, `noPowerUps`: không Cất / Đổi khối — canvas bỏ hàng nút, reducer + replay từ chối `STASH_PIECE` / `REPLACE_TRAY`).
   - Mỗi nước đi được ghi ngay lên RTDB `moves/{roundKey}/{uid}/{0000…}` kèm giờ server (`modules/duel/duel-move-stream.ts`). Đối thủ + người xem replay nước đi từ seed để vẽ bàn thật (`use-duel-board.ts`); server chấm từ cùng chuỗi nước (`settle-duel-round.ts`, chỉ nước liên tục, ghi trước `endsAt + 3s`).
   - Chốt ván (`decideDuelRound`): cả hai hết nước → so điểm; một người hết nước và người kia **vượt** điểm → thắng ngay; còn lại người sống chơi tới hết nước / hết 3 phút. Client gọi `settle` khi mình dừng hoặc vừa vượt điểm; `GET` chốt ván quá hạn.
   - Hết ván → bảng "Trận đấu" (không ván mới / hồi sinh), xem bàn đối thủ tới khi có kết quả. Đấu lại: hai người `ready` → ván mới cùng phòng (seed mới), `series` + `history` giữ tỉ số; nước đi ván cũ bị xoá.
   - Người xem: mở link/mã khi phòng đủ người → hai bàn trực tiếp, tỉ số, số người xem (`online`). XP/thống kê ván vẫn qua `/api/games/submit`; `users.duelStats` cộng khi chốt ván. Ván bị chốt sớm (hết giờ/bỏ trận) mang `endedEarly` để tải lại vẫn là hết ván.
 - Kết nối RTDB dùng chung, đếm người giữ (`modules/realtime/realtime-connection.ts`) để presence và phòng đấu không ngắt nhau.
 
-### Phần thưởng: thưởng ngày, mục tiêu sự kiện
+### Phần thưởng: thưởng chuỗi, mốc thử thách, thưởng tuần
 
 - Thưởng ngày: xong lượt daily tính điểm → `POST /api/daily/claim` (mỗi ngày 1 lần, `users/{uid}/daily/{day}.rewardClaimedAt`), xu theo vòng 7 ngày của chuỗi (20→150, `daily-reward-track.ts`). Nhận ở /daily (hộp chúc mừng), trang chủ + hộp hết ván báo khi có quà.
-- Sự kiện tuần (/event): 3 mốc điểm trong 1 ván (1.000/3.000/6.000 → 30/80/150 xu) nhận ngay khi đạt; thưởng hạng cuối tuần (top 1/3/10/100 + tham gia) nhận ở tuần sau, hạng tính lúc nhận bằng `count()` trên bảng đã đóng. `GET /api/events`, `POST /api/events/claim`, đánh dấu `users/{uid}/eventRewards/{week}`. Sự kiện kết thúc 00:00 thứ Hai giờ VN.
+- Mốc thử thách ngày + rương sao + thưởng hạng tuần: xem phần "Thử thách hằng ngày" ở trên. Tuần kết thúc 00:00 thứ Hai giờ VN.
 - Đấu 1v1: id phòng = mã 6 ký tự (bảng chữ không dễ nhầm), vào bằng link hoặc gõ mã ở /duel; phòng cũ id 10 ký tự vẫn mở được.
 
 ### Luồng ván tính điểm
@@ -147,6 +149,7 @@ HUD/dialog đọc store qua selector → React render
 - Bàn 8x8, khay 3 khối (15 họ polyomino, đủ hướng xoay, không xoay khi chơi). Dùng hết 3 khối mới chia lượt mới.
 - Hàng/cột đầy xoá cùng lúc. Game over khi không khối nào trong khay hoặc ô cất đặt được.
 - Điểm (`engine/score-and-combo-rules.ts`): 1/ô đặt + `10·n(n+1)/2` cho n dòng xoá × combo (1 + 0.5/bậc), combo giữ 3 nước không xoá; dọn sạch bàn +300.
+- Khay đầu ván (bàn trống, không phải màn chơi): `engine/opening-tray-generator.ts` bốc theo seed 1 trong 19 bộ 3 khối to đặt được để xoá ≥ 2 dòng (thứ tự + màu ngẫu nhiên), thay lượt smart đầu; màn chơi giữ bộ chia cũ (thiết kế theo seed).
 - Chia khối (`engine/piece-tray-generator.ts`): chu kỳ smart/bag/bag. `board-smart-selector.ts` chọn tuần tự theo bàn và mô phỏng xoá dòng; `tray-generator-config.ts` chứa túi khối, nhánh điểm 100/800 và shuffle. Túi rút không hoàn lại, không bắt buộc cả ba khối đặt được; chỉ thay slot đầu bằng dot nếu khay và ô cất đều không có nước đi. State lưu bộ đếm, hàng đợi túi và phần còn lại. Chi tiết/kiểm chứng: `classic-tray-generation.md`.
 - Bàn mở đầu trống. Ô cất mở từ 300 điểm (giữ cho các ván sau); đổi khay 2 lượt/ván; hồi sinh 1 lần: xoá 2 hàng + 2 cột đầy nhất rồi chia khay mới (`engine/power-up-rules.ts`).
 - Tutorial 3 bài tự thiết kế (`engine/tutorial.ts`), chạy trên state tạm, không đụng save.

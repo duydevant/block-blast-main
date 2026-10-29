@@ -4,7 +4,7 @@ import { BOARD_CELL_COUNT, BOARD_SIZE, type BoardCells } from "@/modules/block-p
 export const STONE_COLOR_ID = 8
 
 /**
- * Bàn từ 8 dòng chữ: "#" = đá, "." = trống. Viết màn/sự kiện bằng hình vẽ dễ đọc hơn mảng số.
+ * Bàn từ 8 dòng chữ: "#" = đá, "." = trống. Viết màn bằng hình vẽ dễ đọc hơn mảng số.
  * Sai kích thước → throw ngay lúc nạp module (lỗi soạn catalog, không phải lỗi người chơi).
  */
 export function boardFromPattern(rows: readonly string[]): BoardCells {

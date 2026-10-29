@@ -8,7 +8,6 @@ import { replayRecordedGame, type RecordedGameAction } from "@/modules/block-puz
 import { hasFullLine } from "./board-pattern"
 import { BOARD_PATTERNS } from "./board-patterns"
 import { findLevel, isLevelGoalMet, isLevelUnlocked, LEVELS, levelVariant, starsForLevel } from "./level-catalog"
-import { eventRuleForWeek, WEEKLY_EVENT_RULES } from "./weekly-event-catalog"
 
 /** Bot tham lam chơi tới khi hết ván; trả các nước đã đi. */
 function botPlay(start: GameState, stop: (state: GameState) => boolean = () => false) {
@@ -77,13 +76,5 @@ describe("levels", () => {
     expect(isLevelUnlocked(2, { "1": 2 })).toBe(true)
     expect(findLevel(0)).toBeUndefined()
     expect(findLevel(LEVELS.length + 1)).toBeUndefined()
-  })
-})
-
-describe("weekly events", () => {
-  it("rotate deterministically through every rule", () => {
-    expect(eventRuleForWeek("2026-W44")).toBe(eventRuleForWeek("2026-W44"))
-    const ids = new Set(Array.from({ length: WEEKLY_EVENT_RULES.length }, (_, i) => eventRuleForWeek(`2026-W${String(i + 10).padStart(2, "0")}`).id))
-    expect(ids.size).toBe(WEEKLY_EVENT_RULES.length)
   })
 })

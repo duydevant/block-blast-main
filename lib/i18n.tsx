@@ -6,6 +6,7 @@ import { blockPuzzleEn, blockPuzzleVi } from "@/modules/block-puzzle/block-puzzl
 import { challengeEn, challengeVi } from "@/modules/challenge/challenge-translations"
 import { leaderboardEn, leaderboardVi } from "@/modules/leaderboard/leaderboard-translations"
 import { playerProfileEn, playerProfileVi } from "@/modules/player-profile/player-profile-translations"
+import { dailyChallengeEn, dailyChallengeVi } from "@/modules/progression/daily-challenge-translations"
 import { progressionEn, progressionVi } from "@/modules/progression/progression-translations"
 import { pwaEn, pwaVi } from "@/modules/pwa/pwa-translations"
 import { howToPlayEn, howToPlayVi } from "@/modules/seo/how-to-play-translations"
@@ -39,6 +40,7 @@ const en = {
   ...leaderboardEn,
   ...challengeEn,
   ...progressionEn,
+  ...dailyChallengeEn,
   ...pwaEn,
   ...howToPlayEn,
   ...gameModesEn,
@@ -69,6 +71,7 @@ const vi: TranslationDictionary = {
   ...leaderboardVi,
   ...challengeVi,
   ...progressionVi,
+  ...dailyChallengeVi,
   ...pwaVi,
   ...howToPlayVi,
   ...gameModesVi,

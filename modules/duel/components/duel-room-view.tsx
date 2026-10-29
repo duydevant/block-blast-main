@@ -3,27 +3,26 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
-import { EyeIcon, SendIcon } from "lucide-react"
+import { EyeIcon } from "lucide-react"
 import { toast } from "sonner"
 
-import { CHUNKY_BUTTON, MODE_THEME } from "@/components/game-ui/game-ui-classes"
+import { MODE_THEME } from "@/components/game-ui/game-ui-classes"
 import { PageHeader } from "@/components/game-ui/page-header"
 import { ApiRequestError } from "@/lib/firebase/fetch-json-with-firebase-id-token"
 import { useI18n } from "@/lib/i18n"
 import { Routes } from "@/lib/routes"
-import { siteConfig } from "@/lib/site"
 import { useBlockPuzzleGameStore } from "@/modules/block-puzzle/store/block-puzzle-game-store"
 import { startRankedGameCloudSync } from "@/modules/block-puzzle/store/ranked-game-cloud-sync"
 import { guestTagFromUid } from "@/modules/player-profile/player-profile-types"
 import { useSignedInUid } from "@/modules/player-profile/use-player-profile-query"
-import { shareOrCopyLink } from "@/modules/share/share-or-copy-link"
 
-import { duelPlayHref, duelUrl, joinDuelRoom, settleDuelRoom } from "../duel-actions"
+import { duelPlayHref, joinDuelRoom, settleDuelRoom } from "../duel-actions"
 import { flushDuelMoves } from "../duel-move-stream"
 import type { DuelPlayer } from "../duel-types"
 import { useDuelMatch } from "../use-duel-match"
 import { useDuelOnline } from "../use-duel-online"
 import { formatDuelClock } from "./duel-hud"
+import { DuelInviteButtons } from "./duel-invite-buttons"
 import { DuelLiveBoards } from "./duel-live-boards"
 import { DuelRoomCode } from "./duel-room-code"
 import { DuelRoundFinished } from "./duel-round-finished"
@@ -81,10 +80,6 @@ export function DuelRoomView({ duelId }: { duelId: string }) {
   }, [canEnterGame, inWindow, round, router, duelId])
 
   const nameOf = (player: DuelPlayer) => (player.uid === uid ? t("duel.you") : (player.name ?? t("profile.guestName", { tag: guestTagFromUid(player.uid) })))
-  const share = (text: string) =>
-    shareOrCopyLink({ title: siteConfig.name, text, url: duelUrl(duelId) })
-      .then((outcome) => outcome === "copied" && toast.success(t("share.copied")))
-      .catch(() => toast.error(t("share.failed")))
   const join = async () => {
     setBusy(true)
     try {
@@ -115,10 +110,7 @@ export function DuelRoomView({ duelId }: { duelId: string }) {
           {state.host.uid === uid ? (
             <>
               <DuelRoomCode code={duelId} />
-              <button className={`${pink.button} h-16 text-[22px] [&_svg]:size-6`} onClick={() => void share(t("duel.shareText", { name: siteConfig.name, code: duelId }))}>
-                <SendIcon aria-hidden="true" />
-                {t("duel.share")}
-              </button>
+              <DuelInviteButtons duelId={duelId} kind="join" />
             </>
           ) : (
             <button className={`${pink.button} h-16 text-[22px]`} disabled={busy || !uid} onClick={() => void join()}>
@@ -155,10 +147,7 @@ export function DuelRoomView({ duelId }: { duelId: string }) {
             <EyeIcon className="size-4" aria-hidden="true" />
             {isMember ? t("duel.watchers", { count: watchers }) : t("duel.spectating", { count: watchers })}
           </span>
-          <button className={`${CHUNKY_BUTTON.secondary} h-11 px-4 text-sm`} onClick={() => void share(t("duel.watchShareText", { name: siteConfig.name, code: duelId }))}>
-            <SendIcon aria-hidden="true" />
-            {t("duel.inviteWatch")}
-          </button>
+          <DuelInviteButtons duelId={duelId} kind="watch" />
         </div>
       )}
 

@@ -106,12 +106,14 @@ export function BlockPuzzleGameCanvas() {
 
     const resize = () => {
       const { width, height } = container.getBoundingClientRect()
-      layout = computeLayout(width, height, window.devicePixelRatio)
+      // Ván 1v1 không có hàng "Cất | Đổi khối" → bàn to hơn.
+      const powerUps = !useBlockPuzzleGameStore.getState().game?.noPowerUps
+      layout = computeLayout(width, height, window.devicePixelRatio, powerUps)
       canvas.width = Math.round(width * layout.dpr)
       canvas.height = Math.round(height * layout.dpr)
       canvas.style.width = `${width}px`
       canvas.style.height = `${height}px`
-      setSwapRect(layout.cellSize > 0 ? layout.swapButton : null)
+      setSwapRect(layout.cellSize > 0 && powerUps ? layout.swapButton : null)
       // Toạ độ snap cũ không còn đúng sau khi đổi kích thước.
       controller.cancelDrag()
       // Đổi kích thước canvas sẽ xoá nội dung → vẽ lại ngay để không chớp trắng.
@@ -125,6 +127,8 @@ export function BlockPuzzleGameCanvas() {
       const game = state.game
       const before = prev.game
       if (!game || game === before) return
+      // Sang / rời ván 1v1 → bố cục có / không có hàng "Cất | Đổi khối".
+      if (layout && layout.powerUps === Boolean(game.noPowerUps)) resize()
 
       if (drag && (drag.slot === STASH_SLOT ? game.stash : game.tray[drag.slot])?.uid !== drag.uid) controller.cancelDrag()
       const move = game.lastMove

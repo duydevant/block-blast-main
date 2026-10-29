@@ -44,17 +44,17 @@ describe("board ids", () => {
   it("maps periods to the current boards", () => {
     expect(boardIdForPeriod("today", now)).toBe("today-20261027")
     expect(boardIdForPeriod("daily", now)).toBe("daily-20261027")
-    expect(boardIdForPeriod("event", now)).toBe("event-2026-W44")
+    expect(boardIdForPeriod("challenge", now)).toBe("challenge-week-2026-W44")
     expect(boardIdForPeriod("weekly", now)).toBe("weekly-2026-W44")
     expect(boardIdForPeriod("alltime", now)).toBe(ALLTIME_BOARD_ID)
   })
 
-  it("puts classic games and counted daily runs on today + weekly + all-time; practice daily runs nowhere", () => {
-    // Vô tận còn tính cho sự kiện tuần này.
-    expect(boardIdsForRankedGame("classic", now, null, false)).toEqual(["today-20261027", "weekly-2026-W44", "alltime", "event-2026-W44"])
+  it("puts classic games and the first daily run on today + weekly + all-time; later runs only on the day board", () => {
+    expect(boardIdsForRankedGame("classic", now, null, false)).toEqual(["today-20261027", "weekly-2026-W44", "alltime"])
     // Lượt daily nộp muộn (thử thách hôm qua): bảng thử thách theo ngày của thử thách, bảng "hôm nay" theo ngày nộp.
     expect(boardIdsForRankedGame("daily", now, "20261026", true)).toEqual(["daily-20261026", "today-20261027", "weekly-2026-W44", "alltime"])
-    expect(boardIdsForRankedGame("event", now, null, false, "2026-W44")).toEqual(["event-2026-W44"])
+    expect(boardIdsForRankedGame("daily", now, "20261027", true, false)).toEqual(["daily-20261027"])
+    expect(boardIdsForRankedGame("duel", now, null, false)).toEqual([])
     expect(boardIdsForRankedGame("level", now, null, false)).toEqual([])
     expect(boardIdsForRankedGame("daily", now, "20261026", false)).toEqual([])
   })

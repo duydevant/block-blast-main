@@ -1,7 +1,7 @@
 /** Kiểu dữ liệu bảng xếp hạng dùng chung giữa API (server) và UI (client). */
 
-/** Tab trang /leaderboard: "today" = mọi ván tính điểm hôm nay, "event" = bảng sự kiện của tuần hiện tại. */
-export const LEADERBOARD_TABS = ["today", "weekly", "event", "alltime"] as const
+/** Tab trang /leaderboard: "today" = mọi ván tính điểm hôm nay, "challenge" = tổng điểm thử thách ngày cả tuần. */
+export const LEADERBOARD_TABS = ["today", "weekly", "challenge", "alltime"] as const
 export type LeaderboardTab = (typeof LEADERBOARD_TABS)[number]
 
 /** Mọi bảng hiện hành đọc được qua API; "daily" = riêng thử thách ngày (hiện ở trang /daily). */

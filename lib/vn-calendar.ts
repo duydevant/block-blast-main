@@ -1,4 +1,4 @@
-/** Lịch theo giờ Việt Nam dùng chung client + server: khoá ngày thử thách, tuần ISO của sự kiện. */
+/** Lịch theo giờ Việt Nam dùng chung client + server: khoá ngày thử thách, tuần ISO của thử thách tuần. */
 
 /** Ranh giới ngày/tuần theo giờ Việt Nam (UTC+7, không có giờ mùa hè). */
 const DAILY_UTC_OFFSET_MS = 7 * 60 * 60 * 1000
@@ -29,12 +29,25 @@ export function previousDayKey(dayKey: string): string {
   return formatDayKey(new Date(parseDayKey(dayKey).getTime() - DAY_MS))
 }
 
+/** Tuần ISO chứa ngày "YYYYMMDD" (VD thử thách ngày Chủ nhật nộp muộn sáng thứ Hai vẫn thuộc tuần cũ). */
+export function isoWeekKeyForDay(dayKey: string): string {
+  // Giữa trưa giờ VN của ngày đó → không lệch ngày khi đổi múi giờ.
+  return isoWeekKeyFor(new Date(parseDayKey(dayKey).getTime() + 5 * 60 * 60 * 1000))
+}
+
+/** 7 khoá ngày (thứ Hai → Chủ nhật) của tuần chứa ngày "YYYYMMDD". */
+export function weekDayKeysFor(dayKey: string): string[] {
+  const date = parseDayKey(dayKey)
+  const monday = date.getTime() - ((date.getUTCDay() || 7) - 1) * DAY_MS
+  return Array.from({ length: 7 }, (_, index) => formatDayKey(new Date(monday + index * DAY_MS)))
+}
+
 /** Số ngày từ `from` tới `to` (cùng ngày = 0, `to` trước `from` thì âm). */
 export function daysBetweenDayKeys(from: string, to: string): number {
   return Math.round((parseDayKey(to).getTime() - parseDayKey(from).getTime()) / DAY_MS)
 }
 
-/** Thời điểm (ms) bắt đầu tuần ISO kế tiếp = 00:00 thứ Hai giờ VN (sự kiện tuần kết thúc lúc này). */
+/** Thời điểm (ms) bắt đầu tuần ISO kế tiếp = 00:00 thứ Hai giờ VN (thử thách tuần kết thúc lúc này). */
 export function nextWeekStartMs(now: Date): number {
   const date = localDate(now)
   const weekday = date.getUTCDay() || 7

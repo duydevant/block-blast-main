@@ -2,6 +2,7 @@ import { canPlace, clearLines, createEmptyBoard, findFullLines, isBoardEmpty, pl
 import { STASH_SLOT, type BoardCells, type GameAction, type GameState, type GameVariant, type MoveResult, type TraySlots } from "./game-types"
 import { hasAnyMove } from "./move-availability"
 import { findShape } from "./piece-shape-catalog"
+import { dealOpeningTray } from "./opening-tray-generator"
 import { dealTray } from "./piece-tray-generator"
 import { isStashUnlocked, POWER_UP_RULES, replaceTray, revive, stashPiece } from "./power-up-rules"
 import { nextComboState, scoreForMove } from "./score-and-combo-rules"
@@ -22,7 +23,10 @@ function computeGameOver(state: Pick<GameState, "moveLimit" | "moveCount" | "end
 
 export function createNewGame(seed: number, variant: GameVariant = {}): GameState {
   const board = variant.startBoard ? [...variant.startBoard] : createEmptyBoard()
-  const deal = dealTray(board, 0, normalizeSeed(seed), 1)
+  // Ván thường bàn trống → khay mở đầu ngẫu nhiên "nổ to". Màn chơi (thiết kế + kiểm theo seed) và bàn dựng sẵn
+  // → bộ chia thông minh theo bàn như cũ.
+  const opening = variant.moveLimit === undefined && isBoardEmpty(board)
+  const deal = opening ? dealOpeningTray(normalizeSeed(seed), 1) : dealTray(board, 0, normalizeSeed(seed), 1)
   return {
     board,
     tray: deal.tray,
@@ -36,8 +40,9 @@ export function createNewGame(seed: number, variant: GameVariant = {}): GameStat
     generatorState: deal.generatorState,
     stash: null,
     stashUnlocked: false,
-    replaceCharges: variant.replaceCharges ?? POWER_UP_RULES.replaceChargesPerGame,
+    replaceCharges: variant.noPowerUps ? 0 : (variant.replaceCharges ?? POWER_UP_RULES.replaceChargesPerGame),
     reviveUsed: variant.noRevive ?? false,
+    ...(variant.noPowerUps ? { noPowerUps: true } : {}),
     ...(variant.moveLimit !== undefined ? { moveLimit: variant.moveLimit } : {}),
     linesCleared: 0,
     lastMove: null,
