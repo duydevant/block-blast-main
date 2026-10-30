@@ -10,6 +10,8 @@ import type { PlayerProfile } from "@/modules/player-profile/player-profile-type
 import { usePlayerProfileQuery } from "@/modules/player-profile/use-player-profile-query"
 
 import { type Achievement, ACHIEVEMENT_CATEGORIES, type AchievementState, ACHIEVEMENTS, totalLevelStars } from "../achievement-catalog"
+import { arenaPoints } from "@/modules/game-modes/arena-catalog"
+
 import { levelForXp } from "../player-level-curve"
 
 const UNLOCKED_COLORS = ["bg-[#ffb547]", "bg-[#2ec4b6]", "bg-[#4ea8ff]", "bg-[#ff7eb6]", "bg-[#c86bfa]", "bg-[#9ad94a]"]
@@ -26,6 +28,7 @@ function achievementState(profile: PlayerProfile): AchievementState {
     highestTier: profile.highestTier,
     todayGames1000: 0,
     dailyThreeStarDays: profile.dailyThreeStarDays,
+    arenaPoints: arenaPoints(profile.arena),
   }
 }
 

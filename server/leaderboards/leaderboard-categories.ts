@@ -4,6 +4,7 @@ import { CATEGORY_PERIODS, LEADERBOARD_CATEGORIES, type LeaderboardCategory } fr
 import type { LeaderboardPeriod } from "@/modules/leaderboard/leaderboard-types"
 import type { RankedGameMode } from "@/modules/player-profile/player-profile-types"
 import { isQualifyingGame } from "@/modules/progression/player-level-curve"
+import { seasonKeyFor } from "@/lib/vn-calendar"
 import { isoWeekKeyFor } from "@/server/daily/daily-challenge-calendar"
 
 import { ALLTIME_BOARD_ID, boardIdForPeriod, boardIdsForRankedGame } from "./leaderboard-board-ids"
@@ -17,10 +18,15 @@ export interface BoardWrite {
   policy: BoardPolicy
 }
 
-/** Id bảng hiện hành của một hạng mục + kỳ: score giữ id cũ; hạng mục khác `${category}-alltime` / `${category}-weekly-YYYY-Www`. */
+/**
+ * Id bảng hiện hành của một hạng mục + kỳ: score giữ id cũ; hạng mục khác `${category}-alltime`,
+ * `${category}-weekly-YYYY-Www`, `${category}-season-YYYY-MM`.
+ */
 export function boardIdFor(category: LeaderboardCategory, period: LeaderboardPeriod, now: Date): string {
   if (category === "score") return boardIdForPeriod(period, now)
-  return period === "weekly" ? `${category}-weekly-${isoWeekKeyFor(now)}` : `${category}-${ALLTIME_BOARD_ID}`
+  if (period === "weekly") return `${category}-weekly-${isoWeekKeyFor(now)}`
+  if (period === "season") return `${category}-season-${seasonKeyFor(now)}`
+  return `${category}-${ALLTIME_BOARD_ID}`
 }
 
 /** Mọi bảng hiện hành (đổi tên người chơi cập nhật hết). */
@@ -57,7 +63,7 @@ export function boardWritesForRankedGame(input: RankedGameBoardInput): BoardWrit
   const scoreSet = mode === "classic" || (mode === "daily" && input.countsForDaily && input.firstDailyRun)
   if (scoreSet && summary.moveCount > 0) {
     if (input.formAfter !== null && input.formAfter !== input.formBefore) {
-      writes.push({ boardId: boardIdFor("form", "alltime", now), value: input.formAfter, policy: "replace" })
+      for (const period of CATEGORY_PERIODS.form) writes.push({ boardId: boardIdFor("form", period, now), value: input.formAfter, policy: "replace" })
     }
     if (isPureRun(summary.runStats) && isQualifyingGame(summary.moveCount)) {
       for (const period of CATEGORY_PERIODS.pure) writes.push({ boardId: boardIdFor("pure", period, now), value: summary.score, policy: "max" })

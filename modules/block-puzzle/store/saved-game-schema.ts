@@ -45,6 +45,11 @@ const gameStateSchema = z.object({
   endedEarly: z.boolean().optional(),
   noPowerUps: z.boolean().optional(),
   guaranteedTray: z.boolean().optional(),
+  // Bài học: khay cố định còn lại (shapeId phải có trong catalog).
+  fixedTrays: z
+    .array(z.array(z.string().refine((id) => findShape(id) !== undefined, "unknown shape")).min(1).max(TRAY_SIZE))
+    .max(32)
+    .optional(),
   linesCleared: nonNegativeInt.optional(),
   runStats: runStatsSchema.optional().catch(undefined),
   generatorState: z.union([

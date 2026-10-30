@@ -64,6 +64,10 @@ firebase deploy --only firestore,database
 
 Rules hiện chặn mọi truy cập trực tiếp từ client — app đi qua API route dùng Admin SDK.
 
+### TTL (khai báo trong `firestore.indexes.json`)
+
+`fieldOverrides` bật TTL cho `expireAt` của `gameSessions`, `games`, `gameReplays` → `npx firebase-tools deploy --only firestore:indexes` là đủ, không cần bấm trên console. Cách bấm tay bên dưới chỉ dùng khi không deploy bằng CLI.
+
 ### TTL cho ván chưa nộp (tuỳ chọn, nên làm)
 
 Firestore → **TTL** (tab bên trái của Firestore Database) → **Create policy** → Collection group `gameSessions`, Timestamp field `expireAt` → Create. Session không nộp sẽ tự xoá sau 30 ngày (không tốn phí ghi).

@@ -34,12 +34,12 @@ const ids = (writes: { boardId: string }[]) => writes.map((write) => write.board
 
 describe("boardWritesForRankedGame", () => {
   it("writes score boards plus combo for an assisted endless game", () => {
-    expect(ids(boardWritesForRankedGame(input()))).toEqual(["today-20261029", "weekly-2026-W44", "alltime", "combo-alltime"])
+    expect(ids(boardWritesForRankedGame(input()))).toEqual(["today-20261029", "weekly-2026-W44", "season-2026-10", "alltime", "combo-alltime"])
   })
 
   it("adds pure boards for a pure game and the form board when form changes", () => {
     const writes = boardWritesForRankedGame(input({ summary: summary({ runStats: EMPTY_RUN_STATS }), formBefore: 900, formAfter: 950 }))
-    expect(ids(writes)).toEqual(expect.arrayContaining(["pure-weekly-2026-W44", "pure-alltime", "form-alltime"]))
+    expect(ids(writes)).toEqual(expect.arrayContaining(["pure-weekly-2026-W44", "pure-season-2026-10", "pure-alltime", "form-alltime", "form-season-2026-10"]))
     expect(writes.find((write) => write.boardId === "form-alltime")).toEqual({ boardId: "form-alltime", value: 950, policy: "replace" })
   })
 

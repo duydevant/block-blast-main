@@ -5,7 +5,7 @@ import type { PlayerTierId } from "@/modules/progression/player-form-rules"
 import type { LeaderboardCategory } from "./leaderboard-categories"
 
 /** Tab trang /leaderboard: "today" = mọi ván tính điểm hôm nay, "challenge" = tổng điểm thử thách ngày cả tuần. */
-export const LEADERBOARD_TABS = ["today", "weekly", "challenge", "alltime"] as const
+export const LEADERBOARD_TABS = ["today", "weekly", "season", "challenge", "alltime"] as const
 export type LeaderboardTab = (typeof LEADERBOARD_TABS)[number]
 
 /** Mọi bảng hiện hành đọc được qua API; "daily" = riêng thử thách ngày (hiện ở trang /daily). */

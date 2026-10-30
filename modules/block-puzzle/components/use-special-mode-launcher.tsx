@@ -25,6 +25,7 @@ import { GAME_PANEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./game-ui-styles"
 const ERRORS: Record<SpecialMode["kind"], { offline: TranslationKey; failed: TranslationKey }> = {
   endless: { offline: "game.endlessFailed", failed: "game.endlessFailed" },
   logic: { offline: "game.endlessFailed", failed: "game.endlessFailed" },
+  arena: { offline: "arena.needsOnline", failed: "arena.startFailed" },
   daily: { offline: "daily.needsOnline", failed: "daily.startFailed" },
   challenge: { offline: "challenge.needsOnline", failed: "challenge.startFailed" },
   level: { offline: "levels.startFailed", failed: "levels.startFailed" },

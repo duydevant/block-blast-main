@@ -2,6 +2,7 @@ import { z } from "zod"
 
 import { CHALLENGE_ID_PATTERN, type ChallengeOpponent } from "@/modules/challenge/challenge-types"
 import { DUEL_ID_PATTERN } from "@/modules/duel/duel-types"
+import { ARENA_TYPES } from "@/modules/game-modes/arena-catalog"
 import { LEVEL_COUNT } from "@/modules/game-modes/level-catalog"
 import type { VariantRun } from "@/modules/game-modes/variant-run"
 
@@ -119,6 +120,15 @@ const rankedStateSchema = z.object({
     .discriminatedUnion("kind", [
       z.object({ kind: z.literal("level"), levelId: z.number().int().min(1).max(LEVEL_COUNT) }),
       z.object({ kind: z.literal("logic") }),
+      z.object({
+        kind: z.literal("arena"),
+        runId: z.string().regex(/^[A-Za-z0-9]{20}$/),
+        type: z.enum(ARENA_TYPES),
+        level: z.number().int().min(1).max(5),
+        attempt: z.number().int().min(1).catch(1),
+        endsAt: z.number().nullable().catch(null),
+        clockOffset: z.number().catch(0),
+      }),
       z.object({
         kind: z.literal("duel"),
         duelId: z.string().regex(DUEL_ID_PATTERN),

@@ -15,6 +15,8 @@ import { gameModesEn, gameModesVi } from "@/modules/game-modes/game-modes-transl
 import { gameSettingsEn, gameSettingsVi } from "@/modules/block-puzzle/game-settings-translations"
 import { analysisEn, analysisVi } from "@/modules/analysis/analysis-translations"
 import { replayEn, replayVi } from "@/modules/replay/replay-translations"
+import { seasonArenaEn, seasonArenaVi } from "@/modules/season/season-arena-translations"
+import { lessonsEn, lessonsVi } from "@/modules/lessons/lessons-translations"
 import { uiEn, uiVi } from "./ui-translations"
 
 import { type Locale, locales } from "./i18n-locales"
@@ -52,6 +54,8 @@ const en = {
   ...gameSettingsEn,
   ...analysisEn,
   ...replayEn,
+  ...seasonArenaEn,
+  ...lessonsEn,
   ...uiEn,
 } as const
 
@@ -87,6 +91,8 @@ const vi: TranslationDictionary = {
   ...gameSettingsVi,
   ...analysisVi,
   ...replayVi,
+  ...seasonArenaVi,
+  ...lessonsVi,
   ...uiVi,
 }
 

@@ -96,6 +96,14 @@ Plan: `plans/261029-2025-ap-dung-minesweeper-online-vao-block-blast/` (phase 01 
 - Cần làm ở host: TTL `gameReplays.expireAt`, deploy `firestore.indexes.json`, cron `rebuild-leaderboards` (Vercel đã khai trong `vercel.json`, Docker trong `docker/daily-reminder-cron.sh`).
 - Ngay sau khi deploy: chạy `npx vite-node --config vitest.config.ts scripts/backfill-form-and-stars-leaderboards.ts` (chạy thử) rồi thêm `--write` để điền sẵn bảng Phong độ + Sao từ `gameSessions` cũ (≤ 30 ngày) và `levelStars`. Mỗi người chỉ gộp 1 lần (`formBackfilledAt`).
 
+## v2.8 — Mùa giải, Đấu trường, Bài học (Phase 03, 2026-10-30)
+
+- Mùa giải tháng: BXH mùa (Điểm / Phong độ / Thuần), 5 nhiệm vụ mùa, thưởng hạng + huy hiệu nhận ở mùa sau; trang `/season`, thẻ trang chủ, huy hiệu ở hồ sơ.
+- Đấu trường 5 loại × 5 cấp, trả xu mở lượt (chỗ tiêu xu chính), trang `/arena`, đồng hồ giờ server cho loại Tốc độ. Số liệu đo bằng bot: `reports/arena-balance.txt`.
+- 12 bài học kỹ thuật với lời giải mẫu, trang SEO `/how-to-play/{slug}`, link từ "Vì sao thua?".
+- Theo dõi kinh tế xu: `coinsSpentTotal` (xu đã kiếm = coins + đã tiêu).
+- Cần ở host: deploy `firestore.indexes.json`; theo dõi tỉ lệ xu tiêu / kiếm sau 4 tuần (mục tiêu ≥ 0.6).
+
 ## Còn mở
 
 - QA trên điện thoại thật (Android Chrome, iOS Safari), cả dọc và ngang.

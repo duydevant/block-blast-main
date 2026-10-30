@@ -7,6 +7,7 @@ import { useI18n } from "@/lib/i18n"
 import { Routes } from "@/lib/routes"
 import { AnalysisStatsNote } from "@/modules/analysis/components/analysis-stats-note"
 import { TierProgressNote } from "@/modules/progression/components/tier-progress-note"
+import { SeasonBadgeRow } from "@/modules/season/components/season-badge-row"
 import { FORM_WINDOW } from "@/modules/progression/player-form-rules"
 
 import { GAME_HISTORY_MODES } from "../game-history-types"
@@ -28,6 +29,7 @@ export function ProfileFormAndModesCard() {
       <TierProgressNote className="justify-start" />
       <p className="text-[11px] text-muted-foreground">{t("form.explain", { window: FORM_WINDOW })}</p>
       <AnalysisStatsNote />
+      <SeasonBadgeRow badges={profile.seasonBadges} />
       {rows.length > 0 && (
         <table className="w-full text-left text-[13px]">
           <caption className="pb-1 text-left font-extrabold">{t("modeStats.title")}</caption>

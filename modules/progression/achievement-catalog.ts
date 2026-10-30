@@ -17,6 +17,8 @@ export interface AchievementState {
   todayGames1000: number
   /** Số ngày thử thách đạt ★★★. */
   dailyThreeStarDays: number
+  /** Điểm Đấu trường (tổng cấp cao nhất đã qua mỗi loại, tối đa 25). */
+  arenaPoints: number
 }
 
 /** Nhóm hiển thị: chăm chỉ / kỹ năng / phong cách / xã hội. */
@@ -66,6 +68,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   achievement("stars-30", "skill", 30, 100, (s) => s.levelStarsTotal),
   achievement("stars-60", "skill", 60, 300, (s) => s.levelStarsTotal),
   achievement("daily-3stars-7", "skill", 7, 200, (s) => s.dailyThreeStarDays),
+  achievement("arena-10", "skill", 10, 200, (s) => s.arenaPoints),
+  achievement("arena-25", "skill", 25, 600, (s) => s.arenaPoints),
   achievement("pure-2000", "style", 2000, 80, (s) => s.stats.bestPureScore),
   achievement("pure-10000", "style", 10000, 300, (s) => s.stats.bestPureScore),
   achievement("quad-clear", "style", 4, 100, (s) => s.stats.maxLinesInMove),

@@ -48,6 +48,7 @@ export async function saveOwnGameReplay(uid: string, gameId: string, actions: Re
 
     const { seed, stashUnlocked, mode, levelId } = session.data
     if (mode === "event") throw new HttpError(409, "game-not-verified")
+    if (mode === "arena") throw new HttpError(400, "replay-not-supported")
     const replay = replayRecordedGame({ seed, stashUnlocked, variant: variantForSession(session.data) }, actions)
     if (!replay.ok || replay.summary.score !== storedScore) throw new HttpError(422, "replay-mismatch")
 

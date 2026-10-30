@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { BrainIcon, LayersIcon, SwordsIcon, TrophyIcon, type LucideIcon } from "lucide-react"
+import { BrainIcon, LayersIcon, SwordIcon, SwordsIcon, TrophyIcon, type LucideIcon } from "lucide-react"
 
 import { type GameMode, MODE_THEME } from "@/components/game-ui/game-ui-classes"
 import { useI18n } from "@/lib/i18n"
@@ -36,7 +36,8 @@ export function HomeModeGrid() {
       subtitle: t("home.levelsSub", { done: Object.keys(stars).length, total: LEVEL_COUNT, stars: starTotal }),
     },
     { mode: "duel", href: Routes.DUEL, icon: SwordsIcon, title: t("nav.duel"), subtitle: t("home.duelSub") },
-    { mode: "logic", href: Routes.PLAY_LOGIC, icon: BrainIcon, title: t("logic.title"), subtitle: t("logic.sub"), wide: true },
+    { mode: "logic", href: Routes.PLAY_LOGIC, icon: BrainIcon, title: t("logic.title"), subtitle: t("logic.sub") },
+    { mode: "arena", href: Routes.ARENA, icon: SwordIcon, title: t("arena.title"), subtitle: t("arena.homeSub") },
     {
       mode: "ranking",
       href: Routes.LEADERBOARD,

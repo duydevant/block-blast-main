@@ -15,6 +15,7 @@ import {
   REFERRAL_GAMES_REQUIRED,
 } from "@/modules/progression/referral-rules"
 import { REFERRAL_THEME } from "@/modules/progression/theme-unlock-rules"
+import { arenaPoints } from "@/modules/game-modes/arena-catalog"
 import { COINS_PER_LEVEL_STAR } from "@/modules/game-modes/level-catalog"
 import { isCountedPureGame } from "@/server/games/apply-verified-game-to-player-stats"
 import type { StoredPlayer } from "@/server/profile/stored-player-document"
@@ -49,6 +50,10 @@ export interface ProgressionInput {
   dailyThreeStarDays: number
   /** Ván nghi bot / tài khoản bị khoá: chỉ XP cơ bản — không nhiệm vụ, thành tích, Bậc, sao màn, quà mời bạn. */
   flagged?: boolean
+  /** XP thưởng ngoài ván (thắng lượt Đấu trường) — cộng trước khi tính cấp. */
+  bonusXp?: number
+  /** Điểm Đấu trường sau ván (thành tích). */
+  arenaPoints?: number
 }
 
 export interface InviterReward {
@@ -93,6 +98,7 @@ function achievementStateFor(player: StoredPlayer, overrides: Partial<Achievemen
     highestTier: highestTier(player.tierRewardsClaimed),
     todayGames1000: 0,
     dailyThreeStarDays: player.dailyThreeStarDays,
+    arenaPoints: arenaPoints(player.arena),
     ...overrides,
   }
 }
@@ -136,7 +142,7 @@ export function applyProgressionForVerifiedGame(input: ProgressionInput): Progre
   const missionXp = missions.completed.reduce((sum, item) => sum + item.xp, 0)
   const missionCoins = missions.completed.reduce((sum, item) => sum + item.coins, 0)
 
-  const xpGained = xpForVerifiedGame(summary.score, summary.moveCount) + missionXp
+  const xpGained = xpForVerifiedGame(summary.score, summary.moveCount) + missionXp + (input.bonusXp ?? 0)
   const xp = stored.xp + xpGained
   const levelBefore = levelForXp(stored.xp)
   const level = levelForXp(xp)
@@ -162,6 +168,7 @@ export function applyProgressionForVerifiedGame(input: ProgressionInput): Progre
     highestTier: highestTier(tierRewardsClaimed),
     todayGames1000: input.todayGames1000,
     dailyThreeStarDays: input.dailyThreeStarDays,
+    ...(input.arenaPoints !== undefined ? { arenaPoints: input.arenaPoints } : {}),
   })
   const achieved = flagged ? [] : newlyMetAchievements(stored.achievements, achievementState)
   const achievementCoins = achieved.reduce((sum, item) => sum + item.coins, 0)

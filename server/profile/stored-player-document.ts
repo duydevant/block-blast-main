@@ -27,7 +27,7 @@ export const YEARS_SUBCOLLECTION = "years"
 
 const count = z.number().int().nonnegative().catch(0)
 const idList = z.array(z.string()).catch([])
-const RANKED_MODES = ["classic", "daily", "challenge", "level", "duel", "logic"] as const
+const RANKED_MODES = ["classic", "daily", "challenge", "level", "duel", "logic", "arena"] as const
 const modeStatsSchema = z.object({ games: count, best: count, total: count })
 
 const storedPlayerSchema = z.object({
@@ -84,6 +84,16 @@ const storedPlayerSchema = z.object({
   banned: z.boolean().catch(false),
   /** Replay của ván kỷ lục cá nhân (giữ vĩnh viễn). */
   bestReplayId: z.string().nullable().catch(null),
+  /** Slug các bài học kỹ thuật đã qua (thưởng xu lần đầu). */
+  lessonsDone: idList,
+  /** Huy hiệu mùa đã nhận ("2026-11:gold"). */
+  seasonBadges: idList,
+  /** Tổng xu đã tiêu (theme, Đấu trường) — xu đã kiếm = coins + coinsSpentTotal (đo kinh tế xu). */
+  coinsSpentTotal: count,
+  /** Cấp cao nhất đã qua của từng loại Đấu trường. */
+  arena: z.record(z.string(), z.number().int().min(0).max(5)).catch({}),
+  /** Lượt Đấu trường đang mở (null = không có). */
+  arenaRunOpen: z.string().nullable().catch(null),
 })
 
 /** Field người dùng được ghi trong users/{uid}; doc thiếu/hỏng field nào thì field đó về mặc định. */
@@ -112,6 +122,11 @@ const EMPTY_STORED_PLAYER: StoredPlayer = {
   dailyThreeStarDays: 0,
   banned: false,
   bestReplayId: null,
+  lessonsDone: [],
+  seasonBadges: [],
+  coinsSpentTotal: 0,
+  arena: {},
+  arenaRunOpen: null,
 }
 
 export function parseStoredPlayer(data: unknown): StoredPlayer {
@@ -138,6 +153,8 @@ export function toPlayerProfile(uid: string, stored: StoredPlayer, today: string
     ...playerFormView(stored),
     statsByMode: stored.statsByMode,
     dailyThreeStarDays: stored.dailyThreeStarDays,
+    seasonBadges: stored.seasonBadges,
+    arena: stored.arena,
   }
 }
 

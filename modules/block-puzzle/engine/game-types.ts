@@ -81,6 +81,8 @@ export interface GameState {
   noPowerUps?: boolean
   /** Chế độ "Không bế tắc": mọi khay chia ra đều đặt hết được theo một thứ tự nào đó. */
   guaranteedTray?: boolean
+  /** Bài học: các khay cố định CÒN LẠI (shapeId mỗi khay); hết danh sách thì chia như thường. */
+  fixedTrays?: readonly (readonly string[])[]
   /** Tổng số hàng + cột đã xoá trong ván (mục tiêu màn chơi). */
   linesCleared?: number
   /** Chỉ số kỹ năng của ván (reducer cộng dồn); save cũ thiếu → coi như rỗng. */
@@ -103,6 +105,8 @@ export interface GameVariant {
   noPowerUps?: boolean
   /** Khay luôn có lối đi (chế độ "Không bế tắc"). */
   guaranteedTray?: boolean
+  /** Bài học: chia lần lượt các khay này (1–3 khối mỗi khay, theo shapeId) trước khi chia như thường. */
+  fixedTrays?: readonly (readonly string[])[]
 }
 
 export type GameAction =

@@ -14,6 +14,7 @@ import { usePlayerProfileQuery } from "@/modules/player-profile/use-player-profi
 import { DailyRunGameOverNote, useDailyNewGameLabel } from "@/modules/progression/components/daily-run-game-over-note"
 import { useLastGameRewardsStore } from "@/modules/progression/last-game-rewards-store"
 import { GameOverAnalysisButton } from "@/modules/analysis/components/game-over-analysis-button"
+import { ArenaResultNote } from "@/modules/game-modes/components/arena-result-note"
 import { TierProgressNote } from "@/modules/progression/components/tier-progress-note"
 import { GameOverReplayButton } from "@/modules/replay/components/game-over-replay-button"
 import { InstallAppButton } from "@/modules/pwa/components/install-app-button"
@@ -146,6 +147,7 @@ export function GameOverDialog() {
             <AlertDialogDescription className="sr-only">{t("game.gameOverScore", { score: formatNumber(score) })}</AlertDialogDescription>
             <GameOverRunMetrics />
             <GameOverRewardChips />
+            <ArenaResultNote />
             {isRankedEndless && <TierProgressNote />}
             {canRevive && (
               <button className={`${CHUNKY_BUTTON.success} h-[60px] w-full text-[22px]`} onClick={() => revive()}>

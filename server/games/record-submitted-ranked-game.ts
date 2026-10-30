@@ -3,7 +3,12 @@ import "server-only"
 import { FieldValue, type Firestore } from "firebase-admin/firestore"
 
 import { replayRecordedGame, type RecordedGameAction } from "@/modules/block-puzzle/engine/replay-recorded-game-actions"
+import { seasonKeyFor } from "@/lib/vn-calendar"
 import { NO_GAME_REWARDS, type SubmitRankedGameResponse } from "@/modules/player-profile/player-profile-types"
+import { totalLevelStars } from "@/modules/progression/achievement-catalog"
+import { missionBandForTier } from "@/modules/progression/daily-mission-catalog"
+import { formFromRecent, tierForForm } from "@/modules/progression/player-form-rules"
+import { seasonRef, writeSeasonProgress } from "@/server/seasons/season-documents"
 import { findLevel, starsForLevel } from "@/modules/game-modes/level-catalog"
 import { withRecentBest } from "@/modules/progression/daily-challenge-goals"
 import { advanceDailyStreak } from "@/server/daily/advance-daily-streak"
@@ -22,7 +27,10 @@ import {
 
 import { CHALLENGE_RESULTS_SUBCOLLECTION, CHALLENGES_COLLECTION } from "@/server/challenges/challenge-documents"
 
-import { applyVerifiedGameToPlayerStats } from "./apply-verified-game-to-player-stats"
+import { arenaPoints } from "@/modules/game-modes/arena-catalog"
+import { failArenaAttempt, readArenaContext, summarizeArenaAttempt } from "@/server/arena/apply-arena-attempt"
+
+import { isCountedPureGame, statsForSubmission } from "./apply-verified-game-to-player-stats"
 import { assessGamePlausibility } from "./assess-game-plausibility"
 import { storedSessionSchema, variantForSession } from "./stored-game-session"
 import { prepareBoardsAndReplay, writeBoardsAndReplay } from "./submitted-game-boards-and-replay"
@@ -80,9 +88,18 @@ export async function recordSubmittedRankedGame(
     }
     const daily = mode === "daily" && day ? await readDailyRunContext(tx, db, { uid, gameId, dayKey: day, today, now }) : null
     const countsForDaily = daily?.counts ?? false
+    const arena = mode === "arena" ? await readArenaContext(tx, db, uid, session.data.arenaRunId) : null
 
     const replay = replayRecordedGame({ seed, stashUnlocked, variant: variantForSession(session.data) }, actions)
+    const startedMs = session.data.createdAt?.toMillis() ?? now.getTime()
+    // Đấu trường: lần thử không chấm được (log hỏng / 0 nước) vẫn tính là trượt → không rút lại để đổi seed.
+    const failArena = () => {
+      if (arena && failArenaAttempt(tx, arena, gameId, startedMs) && parseStoredPlayer(userSnap.data()).arenaRunOpen === arena.ref.id) {
+        tx.set(userRef, { arenaRunOpen: null }, { merge: true })
+      }
+    }
     if (!replay.ok) {
+      failArena()
       tx.update(sessionRef, { status: "rejected", rejectReason: replay.reason, finishedAt })
       return { ok: false, error: new HttpError(422, "replay-rejected") }
     }
@@ -93,6 +110,7 @@ export async function recordSubmittedRankedGame(
     // không đổi nên mở lại không có lợi gì).
     if (summary.moveCount === 0) {
       if (daily?.counts) releaseDailyRun(tx, daily, gameId)
+      failArena()
       tx.update(sessionRef, { status: "abandoned", finishedAt })
       return { ok: true, response: { score: 0, stats: stored.stats, improvedBoards: [], rewards: NO_GAME_REWARDS } }
     }
@@ -105,22 +123,24 @@ export async function recordSubmittedRankedGame(
     })
     // Không được hưởng gì công khai: nghi bot hoặc tài khoản đã bị khoá.
     const flagged = plausibility.suspect || stored.banned
+    // Đấu trường: chấm lần thử (giờ server), lượt thắng → xu + XP + cấp cao nhất của loại.
+    const durationMs = createdAtMs === null ? 0 : now.getTime() - createdAtMs
+    const playSpanMs = times && times.length === actions.length && times.length > 1 ? times[times.length - 1] - times[0] : null
+    const arenaResult = summarizeArenaAttempt({ context: arena, arenaLevels: stored.arena, gameId, summary, durationMs, playSpanMs, startedMs, flagged })
     const challengeRefs = mode === "challenge" && challengeId && !flagged ? challengeResultRefs(db, challengeId, uid) : null
     const [challengeResultSnap, challengeSnap] = challengeRefs ? await tx.getAll(challengeRefs.result, challengeRefs.challenge) : []
     // Ô cất chỉ "mở vĩnh viễn" khi người chơi tự mở trong ván; ván thách đấu thừa hưởng ô cất của người thách.
     const stashEarned = summary.stashUnlocked && (mode !== "challenge" || !stashUnlocked)
 
-    const counted = applyVerifiedGameToPlayerStats(stored.stats, summary)
-    // Ván bị gắn cờ vẫn cộng số ván / tổng, nhưng không được nâng các kỷ lục (hồ sơ công khai, so kỷ lục cá nhân).
-    const stats = flagged
-      ? { ...counted, bestScore: stored.stats.bestScore, bestCombo: stored.stats.bestCombo, bestPureScore: stored.stats.bestPureScore, maxLinesInMove: stored.stats.maxLinesInMove }
-      : counted
+    const stats = statsForSubmission(stored.stats, summary, flagged)
     const streak = day && countsForDaily ? advanceDailyStreak(stored.streak, day) : stored.streak
     // Ván bị gắn cờ vẫn đóng lượt daily (không kẹt "đang chơi") nhưng như điểm 0: không sao, không xu, không tổng tuần.
     const dailyOutcome = daily?.counts ? dailyRunOutcome(daily, flagged ? 0 : summary.score, stored.dailyBest) : null
     const missionsRef = userRef.collection(MISSIONS_SUBCOLLECTION).doc(today)
     const inviterRef = !flagged && referralIsDue(stored, summary.moveCount) && stored.referredBy ? db.collection(USERS_COLLECTION).doc(stored.referredBy) : null
-    const [missionsSnap, inviterSnap] = await tx.getAll(missionsRef, ...(inviterRef ? [inviterRef] : []))
+    const season = seasonKeyFor(now)
+    const seasonDocRef = seasonRef(db, uid, season)
+    const [missionsSnap, seasonSnap, inviterSnap] = await tx.getAll(missionsRef, seasonDocRef, ...(inviterRef ? [inviterRef] : []))
     const levelDefinition = mode === "level" && levelId !== null ? findLevel(levelId) : undefined
     const missionDay = parseMissionDay(missionsSnap.data())
     const updates = verifiedGamePlayerUpdates({
@@ -149,6 +169,8 @@ export async function recordSubmittedRankedGame(
       todayGames1000: updates.games1000,
       dailyThreeStarDays: updates.dailyThreeStarDays,
       flagged,
+      bonusXp: arenaResult.xp,
+      arenaPoints: arenaPoints(arenaResult.levels),
       inviter: inviterSnap?.exists ? parseStoredPlayer(inviterSnap.data()) : null,
       level: levelDefinition ? { id: levelDefinition.id, stars: starsForLevel(levelDefinition, replay.state) } : null,
     })
@@ -172,6 +194,26 @@ export async function recordSubmittedRankedGame(
 
     // ── Ghi ──
     const replayFields = writeBoardsAndReplay(tx, db, boardsInput, boards, finishedAt)
+    if (arena && arenaResult.outcome && Object.keys(arenaResult.outcome.runPatch).length > 0) tx.update(arena.ref, arenaResult.outcome.runPatch)
+    // Mùa giải: ván bị gắn cờ không tính (số ván, Bậc cao nhất, nhiệm vụ mùa).
+    if (!flagged) {
+      writeSeasonProgress(tx, {
+        ref: seasonDocRef,
+        snap: seasonSnap,
+        season,
+        bandIfNew: missionBandForTier(tierForForm(formFromRecent(stored.recentFormScores))),
+        stamp: finishedAt,
+        game: {
+          linesCleared: summary.linesCleared,
+          firstDailyRun: mode === "daily" && countsForDaily && firstDailyRun,
+          tierAfter: updates.tierAfter,
+          levelStarsGained: totalLevelStars(progression.playerFields.levelStars) - totalLevelStars(stored.levelStars),
+          pureScore: isCountedPureGame(summary) ? summary.score : 0,
+          isDuel: mode === "duel",
+          arenaWon: arenaResult.won,
+        },
+      })
+    }
     writeSubmittedSideDocuments(tx, {
       userRef,
       gameId,
@@ -209,7 +251,10 @@ export async function recordSubmittedRankedGame(
         ...progression.playerFields,
         ...replayFields,
         // Bị gắn cờ: không nhận xu của ván này (XP / thống kê vẫn cộng để người thật bị nhầm không mất tiến trình).
-        coins: flagged ? stored.coins : progression.playerFields.coins + dailyCoins,
+        coins: flagged ? stored.coins : progression.playerFields.coins + dailyCoins + arenaResult.coins,
+        ...(arena
+          ? { arena: arenaResult.levels, ...(arenaResult.outcome?.closed && stored.arenaRunOpen === arena.ref.id ? { arenaRunOpen: null } : {}) }
+          : {}),
         ...(dailyOutcome ? { dailyBest: dailyOutcome.dailyBest } : {}),
         updatedAt: finishedAt,
         ...(userSnap.exists ? {} : { displayName: null, createdAt: finishedAt }),
@@ -231,7 +276,8 @@ export async function recordSubmittedRankedGame(
     })
     const rewards = {
       ...progression.rewards,
-      coins: flagged ? 0 : progression.rewards.coins + dailyCoins,
+      coins: flagged ? 0 : progression.rewards.coins + dailyCoins + arenaResult.coins,
+      arena: arenaResult.outcome?.reward ?? null,
       daily: dailyOutcome?.reward ?? null,
       flagged,
       replayId: boards.replay.store ? gameId : null,

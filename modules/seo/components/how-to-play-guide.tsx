@@ -7,6 +7,7 @@ import { HowToPlayVisual } from "@/components/game-ui/how-to-play-visual"
 import { Button } from "@/components/ui/button"
 import { type TranslationKey, useI18n } from "@/lib/i18n"
 import { Routes } from "@/lib/routes"
+import { LessonList } from "@/modules/lessons/components/lesson-list"
 
 import { HOW_TO_PLAY_FAQ } from "../how-to-play-translations"
 
@@ -47,6 +48,8 @@ export function HowToPlayGuide() {
           </ul>
         </section>
       ))}
+
+      <LessonList />
 
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">{t("guide.faqTitle")}</h2>

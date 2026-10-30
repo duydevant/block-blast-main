@@ -31,3 +31,10 @@ export function applyVerifiedGameToModeStats(byMode: StatsByMode, mode: RankedGa
   const current = byMode[mode] ?? { games: 0, best: 0, total: 0 }
   return { ...byMode, [mode]: { games: current.games + 1, best: Math.max(current.best, score), total: current.total + score } }
 }
+
+/** Ván bị gắn cờ vẫn cộng số ván / tổng, nhưng không được nâng các kỷ lục (hồ sơ công khai, so kỷ lục cá nhân). */
+export function statsForSubmission(stats: PlayerStats, game: ReplaySummary, flagged: boolean): PlayerStats {
+  const counted = applyVerifiedGameToPlayerStats(stats, game)
+  if (!flagged) return counted
+  return { ...counted, bestScore: stats.bestScore, bestCombo: stats.bestCombo, bestPureScore: stats.bestPureScore, maxLinesInMove: stats.maxLinesInMove }
+}

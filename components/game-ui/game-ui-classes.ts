@@ -53,6 +53,13 @@ export const MODE_THEME = {
     accentText: "text-[#c86bfa]",
     button: `${CHUNKY} bg-[#c86bfa] text-[#22062f] shadow-[0_5px_0_#8a35bf] hover:brightness-105`,
   },
+  arena: {
+    card: "bg-[#3a2412]",
+    icon: "bg-[#ffb547] text-[#2a1600]",
+    soft: "text-[#ffd9b8]",
+    accentText: "text-[#ffb547]",
+    button: `${CHUNKY} bg-[#ffb547] text-[#2a1600] shadow-[0_5px_0_#b87a1d] hover:brightness-105`,
+  },
   ranking: {
     card: "bg-[#10322f]",
     icon: "bg-[#2ec4b6] text-[#04211e]",

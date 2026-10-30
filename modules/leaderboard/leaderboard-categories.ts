@@ -10,9 +10,9 @@ export type LeaderboardCategory = (typeof LEADERBOARD_CATEGORIES)[number]
 
 /** Kỳ hợp lệ của từng hạng mục (tab đầu tiên là mặc định). */
 export const CATEGORY_PERIODS: Record<LeaderboardCategory, readonly LeaderboardPeriod[]> = {
-  score: ["today", "weekly", "challenge", "alltime", "daily"],
-  form: ["alltime"],
-  pure: ["weekly", "alltime"],
+  score: ["today", "weekly", "season", "challenge", "alltime", "daily"],
+  form: ["season", "alltime"],
+  pure: ["weekly", "season", "alltime"],
   combo: ["alltime"],
   stars: ["alltime"],
   logic: ["weekly", "alltime"],

@@ -40,6 +40,7 @@ const baseAchievementState: AchievementState = {
   highestTier: "unranked",
   todayGames1000: 0,
   dailyThreeStarDays: 0,
+  arenaPoints: 0,
 }
 
 describe("level curve", () => {

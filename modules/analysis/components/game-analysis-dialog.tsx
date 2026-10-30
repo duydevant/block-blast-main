@@ -7,6 +7,8 @@ import type { GameOutcomeAnalysis } from "@/modules/block-puzzle/engine/game-out
 import { BOARD_SIZE, type BoardCells } from "@/modules/block-puzzle/engine/game-types"
 import { findShape } from "@/modules/block-puzzle/engine/piece-shape-catalog"
 import { GAME_PANEL, SECONDARY_BUTTON } from "@/modules/block-puzzle/components/game-ui-styles"
+import { useBlockPuzzleGameStore } from "@/modules/block-puzzle/store/block-puzzle-game-store"
+import { RelatedLessonLinks } from "@/modules/lessons/components/related-lesson-links"
 
 import type { AnalysisState } from "../use-game-outcome-analysis"
 
@@ -51,13 +53,18 @@ function AnalysisBody({ result }: { result: GameOutcomeAnalysis }) {
 /** Kết quả "Vì sao thua?": nước quyết định (trước / nên đặt), hoặc xui, hoặc chưa phân tích được. */
 export function GameAnalysisDialog({ state, onClose }: { state: AnalysisState; onClose: () => void }) {
   const { t } = useI18n()
+  // Bàn lúc thua (bài "Cứu bàn gần đầy" khi bàn quá chật).
+  const finalBoard = useBlockPuzzleGameStore((store) => (store.game?.isGameOver ? store.game.board : null))
   return (
     <Dialog open={state.status !== "idle"} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={GAME_PANEL + " flex max-w-sm flex-col gap-4 p-6"}>
         <DialogTitle className="font-heading text-2xl font-extrabold">{t("analysis.title")}</DialogTitle>
         <DialogDescription className="sr-only">{t("analysis.running")}</DialogDescription>
         {state.status === "done" ? (
-          <AnalysisBody result={state.result} />
+          <>
+            <AnalysisBody result={state.result} />
+            <RelatedLessonLinks holesCreated={state.result.holesCreated} finalBoard={finalBoard} />
+          </>
         ) : (
           <p className="text-sm text-violet-200/80" role="status">
             {t("analysis.running")}

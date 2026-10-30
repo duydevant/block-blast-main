@@ -42,6 +42,11 @@ describe("parseStoredPlayer", () => {
       dailyThreeStarDays: 0,
       banned: false,
       bestReplayId: null,
+      lessonsDone: [],
+      seasonBadges: [],
+      coinsSpentTotal: 0,
+      arena: {},
+      arenaRunOpen: null,
     })
   })
 

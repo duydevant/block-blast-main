@@ -65,7 +65,7 @@ export async function prepareBoardsAndReplay(tx: Transaction, db: Firestore, inp
     score: summary.score,
     previousBestScore: stored.stats.bestScore,
     topChangedBoards: topChangedBoards(updates, row),
-    suspect: input.flagged,
+    suspect: input.flagged || session.mode === "arena",
   })
   const previousBestId = replay.personalBest ? stored.bestReplayId : null
   const previousBestPinnedByBoard =

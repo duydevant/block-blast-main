@@ -5,6 +5,7 @@ import { randomInt } from "node:crypto"
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
 
 import type { RankedGameMode, StartRankedGameResponse } from "@/modules/player-profile/player-profile-types"
+import { createArenaSession } from "@/server/arena/create-arena-session"
 import { readChallengeForSession } from "@/server/challenges/challenge-store"
 import { startDailyRun } from "@/server/daily/start-daily-run"
 import { getAdminFirestore } from "@/server/firebase/firebase-admin-app"
@@ -28,7 +29,7 @@ const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
  */
 export async function createRankedGameSession(
   uid: string,
-  request: { mode: RankedGameMode; stashUnlocked: boolean; challengeId?: string; levelId?: number; duelId?: string }
+  request: { mode: RankedGameMode; stashUnlocked: boolean; challengeId?: string; levelId?: number; duelId?: string; arenaRunId?: string }
 ): Promise<StartRankedGameResponse> {
   const db = getAdminFirestore()
   const userRef = db.collection(USERS_COLLECTION).doc(uid)
@@ -49,6 +50,7 @@ export async function createRankedGameSession(
   const variantFields = (seed: number, extra: Record<string, unknown>) => ({ ...session(seed, false, null), ...extra })
   if (request.mode === "level") return createLevelSession(uid, sessionRef, variantFields, request.levelId)
   if (request.mode === "duel") return createDuelSession(uid, sessionRef, variantFields, request.duelId)
+  if (request.mode === "arena") return createArenaSession(uid, sessionRef, variantFields, request.arenaRunId)
 
   if (request.mode === "daily") return startDailyRun(uid, sessionRef, (seed, day) => session(seed, false, day))
 

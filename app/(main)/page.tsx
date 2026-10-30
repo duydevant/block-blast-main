@@ -5,6 +5,7 @@ import { HomeHero } from "@/modules/home/components/home-hero"
 import { HomeMissionsRow } from "@/modules/home/components/home-missions-row"
 import { HomeModeGrid } from "@/modules/home/components/home-mode-grid"
 import { PlayersOnlineBadge } from "@/modules/presence/components/players-online-badge"
+import { SeasonHomeCard } from "@/modules/season/components/season-home-card"
 
 /** Trang chủ: vào là thấy bàn chơi + nút Chơi; chế độ khác dạng ô màu, ít chữ. */
 export default function HomePage() {
@@ -13,6 +14,7 @@ export default function HomePage() {
       <HomeHero />
       <HomeDailyCard />
       <HomeModeGrid />
+      <SeasonHomeCard />
       <HomeMissionsRow />
       <div className="flex justify-center">
         <PlayersOnlineBadge />

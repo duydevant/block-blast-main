@@ -26,11 +26,13 @@ export function createNewGame(seed: number, variant: GameVariant = {}): GameStat
   const board = variant.startBoard ? [...variant.startBoard] : createEmptyBoard()
   // Ván thường bàn trống → khay mở đầu ngẫu nhiên "nổ to". Màn chơi (thiết kế + kiểm theo seed) và bàn dựng sẵn
   // → bộ chia thông minh theo bàn như cũ.
-  const opening = variant.moveLimit === undefined && isBoardEmpty(board)
+  // Bài học (khay cố định) không dùng khay mở đầu.
+  const fixedTrays = variant.fixedTrays && variant.fixedTrays.length > 0 ? variant.fixedTrays : undefined
+  const opening = variant.moveLimit === undefined && isBoardEmpty(board) && !fixedTrays
   const guaranteedTray = variant.guaranteedTray === true
   const deal = opening
     ? dealOpeningTray(normalizeSeed(seed), 1)
-    : dealTrayForState({ rngState: normalizeSeed(seed), nextPieceUid: 1, generatorState: undefined, guaranteedTray }, board, 0)
+    : dealTrayForState({ rngState: normalizeSeed(seed), nextPieceUid: 1, generatorState: undefined, guaranteedTray, fixedTrays }, board, 0)
   return {
     board,
     tray: deal.tray,
@@ -48,6 +50,7 @@ export function createNewGame(seed: number, variant: GameVariant = {}): GameStat
     reviveUsed: variant.noRevive ?? false,
     ...(variant.noPowerUps ? { noPowerUps: true } : {}),
     ...(guaranteedTray ? { guaranteedTray: true } : {}),
+    ...("fixedTrays" in deal && deal.fixedTrays ? { fixedTrays: deal.fixedTrays } : {}),
     ...(variant.moveLimit !== undefined ? { moveLimit: variant.moveLimit } : {}),
     linesCleared: 0,
     runStats: EMPTY_RUN_STATS,
@@ -72,10 +75,11 @@ function applyPlacement(state: GameState, slot: number, row: number, col: number
 
   let tray: TraySlots = state.tray.map((item, index) => (index === slot ? null : item))
   const stash = slot === STASH_SLOT ? null : (state.stash ?? null)
-  let { rngState, nextPieceUid, generatorState } = state
+  let { rngState, nextPieceUid, generatorState, fixedTrays } = state
   if (tray.every((item) => item === null)) {
     const deal = dealTrayForState(state, cleared.board, score, stash)
     ;({ tray, rngState, nextPieceUid, generatorState } = deal)
+    if (deal.fixedTrays) fixedTrays = deal.fixedTrays
   }
 
   const lastMove: MoveResult = {
@@ -103,6 +107,7 @@ function applyPlacement(state: GameState, slot: number, row: number, col: number
     rngState,
     nextPieceUid,
     generatorState,
+    ...(fixedTrays ? { fixedTrays } : {}),
     lastMove,
   }
   return { ...next, stashUnlocked: isStashUnlocked(next) }
@@ -117,14 +122,15 @@ export function normalizeRestoredState(state: GameState): GameState {
   const board = clearLines(state.board, lines.rows, lines.cols).board
   const maxUid = Math.max(state.stash?.uid ?? 0, ...state.tray.map((piece) => piece?.uid ?? 0))
   let nextPieceUid = Math.max(state.nextPieceUid, maxUid + 1)
-  let { tray, rngState, generatorState } = state
+  let { tray, rngState, generatorState, fixedTrays } = state
 
   if (tray.every((piece) => piece === null)) {
     const deal = dealTrayForState({ ...state, nextPieceUid }, board, state.score, state.stash)
     ;({ tray, rngState, nextPieceUid, generatorState } = deal)
+    if (deal.fixedTrays) fixedTrays = deal.fixedTrays
   }
 
-  return { ...state, board, tray, rngState, nextPieceUid, generatorState, lastMove: null,
+  return { ...state, board, tray, rngState, nextPieceUid, generatorState, ...(fixedTrays ? { fixedTrays } : {}), lastMove: null,
     stashUnlocked: isStashUnlocked(state), isGameOver: computeGameOver(state, board, tray, state.stash) }
 }
 

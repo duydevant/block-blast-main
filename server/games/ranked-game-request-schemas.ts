@@ -10,11 +10,12 @@ import { MAX_RECORDED_ACTIONS } from "@/modules/block-puzzle/engine/replay-recor
 export const gameIdSchema = z.string().regex(/^[A-Za-z0-9]{20}$/)
 
 export const startRankedGameRequestSchema = z.object({
-  mode: z.enum(["classic", "daily", "challenge", "level", "duel", "logic"]).default("classic"),
+  mode: z.enum(["classic", "daily", "challenge", "level", "duel", "logic", "arena"]).default("classic"),
   stashUnlocked: z.boolean().default(false),
   challengeId: z.string().regex(CHALLENGE_ID_PATTERN).optional(),
   levelId: z.number().int().min(1).max(LEVEL_COUNT).optional(),
   duelId: z.string().regex(DUEL_ID_PATTERN).optional(),
+  arenaRunId: z.string().regex(/^[A-Za-z0-9]{20}$/).optional(),
 })
 
 export const submitRankedGameRequestSchema = z.object({

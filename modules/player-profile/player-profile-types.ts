@@ -2,6 +2,7 @@
 
 import type { ChallengeOpponent } from "@/modules/challenge/challenge-types"
 import type { DuelStartInfo } from "@/modules/duel/duel-types"
+import type { ArenaAttemptReward, ArenaStartInfo } from "@/modules/game-modes/arena-types"
 import type { DailyGoals, DailyWeekStatus } from "@/modules/progression/daily-challenge-goals"
 import type { DailyRewardStatus } from "@/modules/progression/daily-reward-track"
 import type { DailyMissionStatus } from "@/modules/progression/daily-mission-catalog"
@@ -73,6 +74,10 @@ export interface PlayerProfile {
   statsByMode: StatsByMode
   /** Số ngày thử thách đạt ★★★ (tiến độ thành tích). */
   dailyThreeStarDays: number
+  /** Huy hiệu mùa đã nhận ("2026-11:gold"). */
+  seasonBadges: string[]
+  /** Cấp cao nhất đã qua mỗi loại Đấu trường (điểm Đấu trường = tổng). */
+  arena: Record<string, number>
 }
 
 export interface DuelStats {
@@ -86,7 +91,7 @@ export const EMPTY_DAILY_STREAK: DailyStreak = { current: 0, best: 0, lastDailyD
  * classic: seed ngẫu nhiên; daily: seed chung của ngày; challenge: seed của ván người thách đấu;
  * level: màn chơi (seed + bàn cố định); duel: đấu 1v1 cùng seed; logic: "Không bế tắc" (khay luôn có lối đi).
  */
-export type RankedGameMode = "classic" | "daily" | "challenge" | "level" | "duel" | "logic"
+export type RankedGameMode = "classic" | "daily" | "challenge" | "level" | "duel" | "logic" | "arena"
 
 export const EMPTY_PLAYER_STATS: PlayerStats = {
   gamesPlayed: 0,
@@ -138,6 +143,8 @@ export interface StartRankedGameResponse {
   levelId?: number | null
   /** Chỉ có ở duel. */
   duel?: DuelStartInfo | null
+  /** Chỉ có ở arena (lần thử của lượt Đấu trường). */
+  arena?: ArenaStartInfo | null
 }
 
 /** Phần thưởng một ván đã replay mang lại (để client báo cho người chơi). */
@@ -162,6 +169,8 @@ export interface GameRewards {
   flagged?: boolean
   /** Ván được lưu replay (kỷ lục / lọt top) → xem lại tại /game/{replayId}. */
   replayId?: string | null
+  /** Lần thử Đấu trường: đạt chưa, lượt thắng / thua / còn mở (xu + XP thắng lượt đã gộp vào phần thưởng ván). */
+  arena?: ArenaAttemptReward | null
 }
 
 export interface DailyRunGameReward {
