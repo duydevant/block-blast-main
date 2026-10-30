@@ -44,6 +44,7 @@ const gameStateSchema = z.object({
   moveLimit: z.number().int().min(1).max(1000).optional(),
   endedEarly: z.boolean().optional(),
   noPowerUps: z.boolean().optional(),
+  guaranteedTray: z.boolean().optional(),
   linesCleared: nonNegativeInt.optional(),
   runStats: runStatsSchema.optional().catch(undefined),
   generatorState: z.union([

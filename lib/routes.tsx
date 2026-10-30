@@ -5,12 +5,18 @@ export enum Routes {
   PLAY_DAILY = "/play?daily=1",
   /** Nút Play chung: luôn vào ván Vô tận (ván Vô tận đang dở thì chơi tiếp). */
   PLAY_ENDLESS = "/play?endless=1",
+  /** Chế độ "Không bế tắc" (khay luôn có lối đi). */
+  PLAY_LOGIC = "/play?logic=1",
   LEADERBOARD = "/leaderboard",
   /** Trang thách đấu: `${Routes.CHALLENGE}/{id}`. */
   CHALLENGE = "/c",
   PROFILE = "/profile",
   /** Lịch sử ván đã nộp của chính mình. */
   PROFILE_GAMES = "/profile/games",
+  /** Xem lại ván: `${Routes.REPLAY}/{replayId}`. */
+  REPLAY = "/game",
+  /** Hồ sơ công khai: `${Routes.PLAYER}/{tag}`. */
+  PLAYER = "/u",
   /** Giải thích + bảng của thử thách ngày. */
   DAILY = "/daily",
   HOW_TO_PLAY = "/how-to-play",
@@ -25,6 +31,8 @@ export enum ApiRoutes {
   GAMES_SUBMIT = "/api/games/submit",
   GAMES_HISTORY = "/api/games/history",
   MISSIONS_REPLACE = "/api/missions/replace",
+  REPLAYS = "/api/replays",
+  REPORTS = "/api/reports",
   PROFILE = "/api/profile",
   DAILY = "/api/daily",
   DAILY_CLAIM = "/api/daily/claim",

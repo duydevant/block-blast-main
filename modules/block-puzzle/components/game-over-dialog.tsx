@@ -13,7 +13,9 @@ import { LevelResultPanel, useLevelOutcome } from "@/modules/game-modes/componen
 import { usePlayerProfileQuery } from "@/modules/player-profile/use-player-profile-query"
 import { DailyRunGameOverNote, useDailyNewGameLabel } from "@/modules/progression/components/daily-run-game-over-note"
 import { useLastGameRewardsStore } from "@/modules/progression/last-game-rewards-store"
+import { GameOverAnalysisButton } from "@/modules/analysis/components/game-over-analysis-button"
 import { TierProgressNote } from "@/modules/progression/components/tier-progress-note"
+import { GameOverReplayButton } from "@/modules/replay/components/game-over-replay-button"
 import { InstallAppButton } from "@/modules/pwa/components/install-app-button"
 
 import { useBlockPuzzleGameStore } from "../store/block-puzzle-game-store"
@@ -75,6 +77,7 @@ function GameOverRewardChips() {
   const gameId = useBlockPuzzleGameStore((state) => state.rankedSession?.gameId ?? null)
   const rewards = useLastGameRewardsStore((state) => (state.gameId !== null && state.gameId === gameId ? state.rewards : null))
   if (!rewards) return null
+  if (rewards.flagged) return <p className="text-xs text-amber-200">{t("game.flagged")}</p>
   return (
     <div className="grid w-full grid-cols-2 gap-2">
       <div className={REWARD_CHIP}>
@@ -156,6 +159,10 @@ export function GameOverDialog() {
               {newGameLabel ?? t("game.newGame")}
             </button>
             <GameOverShareActions />
+            <div className="grid w-full grid-cols-2 gap-2 empty:hidden">
+              <GameOverReplayButton />
+              <GameOverAnalysisButton />
+            </div>
             <GameOverInstallOffer />
           </>
         )}

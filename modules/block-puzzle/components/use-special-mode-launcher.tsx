@@ -24,14 +24,15 @@ import { GAME_PANEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./game-ui-styles"
 /** Thông báo khi không mở được ván mới của chế độ (mất mạng / lỗi server). */
 const ERRORS: Record<SpecialMode["kind"], { offline: TranslationKey; failed: TranslationKey }> = {
   endless: { offline: "game.endlessFailed", failed: "game.endlessFailed" },
+  logic: { offline: "game.endlessFailed", failed: "game.endlessFailed" },
   daily: { offline: "daily.needsOnline", failed: "daily.startFailed" },
   challenge: { offline: "challenge.needsOnline", failed: "challenge.startFailed" },
   level: { offline: "levels.startFailed", failed: "levels.startFailed" },
   duel: { offline: "duel.needsOnline", failed: "duel.startFailed" },
 }
 
-/** Vô tận / màn chơi mở được offline; chế độ khác cần tài khoản cloud để xin ván mới (chơi tiếp ván cất thì không cần). */
-const needsCloud = (mode: SpecialMode) => mode.kind !== "endless" && mode.kind !== "level"
+/** Vô tận / Không bế tắc / màn chơi mở được offline; chế độ khác cần tài khoản cloud để xin ván mới (chơi tiếp ván cất thì không cần). */
+const needsCloud = (mode: SpecialMode) => mode.kind !== "endless" && mode.kind !== "level" && mode.kind !== "logic"
 
 /**
  * Vào chế độ từ nút Play / link / menu. Các chế độ độc lập: sang chế độ khác thì ván đang chơi được cất lại

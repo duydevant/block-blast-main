@@ -3,6 +3,8 @@ import { ApiRequestError, fetchJsonWithFirebaseIdToken } from "@/lib/firebase/fe
 import { ApiRoutes } from "@/lib/routes"
 import type { StartRankedGameResponse, SubmitRankedGameResponse } from "@/modules/player-profile/player-profile-types"
 
+import { actionTimesOf, withoutActionTime } from "../engine/recorded-action-timing"
+
 import { useBlockPuzzleGameStore } from "./block-puzzle-game-store"
 import { isUntouchedGame } from "./ranked-game-cloud-state"
 
@@ -81,7 +83,7 @@ export function startRankedGameCloudSync(onGameSubmitted: (result: SubmitRankedG
         try {
           const result = await fetchJsonWithFirebaseIdToken<SubmitRankedGameResponse>(ApiRoutes.GAMES_SUBMIT, {
             method: "POST",
-            body: { gameId: item.gameId, actions: item.actions },
+            body: { gameId: item.gameId, actions: item.actions.map(withoutActionTime), times: actionTimesOf(item.actions) ?? undefined },
             expectedUid: uid,
           })
           store.getState().removePendingSubmission(item.gameId)

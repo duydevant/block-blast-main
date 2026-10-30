@@ -10,7 +10,7 @@ import { MAX_RECORDED_ACTIONS } from "@/modules/block-puzzle/engine/replay-recor
 export const gameIdSchema = z.string().regex(/^[A-Za-z0-9]{20}$/)
 
 export const startRankedGameRequestSchema = z.object({
-  mode: z.enum(["classic", "daily", "challenge", "level", "duel"]).default("classic"),
+  mode: z.enum(["classic", "daily", "challenge", "level", "duel", "logic"]).default("classic"),
   stashUnlocked: z.boolean().default(false),
   challengeId: z.string().regex(CHALLENGE_ID_PATTERN).optional(),
   levelId: z.number().int().min(1).max(LEVEL_COUNT).optional(),
@@ -20,7 +20,9 @@ export const startRankedGameRequestSchema = z.object({
 export const submitRankedGameRequestSchema = z.object({
   gameId: gameIdSchema,
   actions: z.array(recordedActionSchema).max(MAX_RECORDED_ACTIONS),
+  /** Thời điểm từng nước (epoch ms) — chỉ để phát hiện bot / phát lại theo nhịp; sai dạng thì bỏ, không từ chối ván. */
+  times: z.array(z.number().finite().nonnegative()).max(MAX_RECORDED_ACTIONS).optional().catch(undefined),
 })
 
-/** MAX_RECORDED_ACTIONS (10.000) × ~50 byte JSON ≈ 500KB, cộng phần dư. */
-export const MAX_REQUEST_BODY_BYTES = 640 * 1024
+/** MAX_RECORDED_ACTIONS (10.000) × ~65 byte JSON (kèm `t` + mảng times) ≈ 650KB, cộng phần dư. */
+export const MAX_REQUEST_BODY_BYTES = 800 * 1024

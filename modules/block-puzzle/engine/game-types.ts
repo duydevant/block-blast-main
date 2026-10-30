@@ -79,6 +79,8 @@ export interface GameState {
   endedEarly?: boolean
   /** Ván không có "Cất" / "Đổi khối" (đấu 1v1): giao diện ẩn hai nút, reducer từ chối hai thao tác này. */
   noPowerUps?: boolean
+  /** Chế độ "Không bế tắc": mọi khay chia ra đều đặt hết được theo một thứ tự nào đó. */
+  guaranteedTray?: boolean
   /** Tổng số hàng + cột đã xoá trong ván (mục tiêu màn chơi). */
   linesCleared?: number
   /** Chỉ số kỹ năng của ván (reducer cộng dồn); save cũ thiếu → coi như rỗng. */
@@ -99,6 +101,8 @@ export interface GameVariant {
   noRevive?: boolean
   /** Không có ô "Cất" và nút "Đổi khối" (đấu 1v1). */
   noPowerUps?: boolean
+  /** Khay luôn có lối đi (chế độ "Không bế tắc"). */
+  guaranteedTray?: boolean
 }
 
 export type GameAction =

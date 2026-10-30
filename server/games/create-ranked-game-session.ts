@@ -60,7 +60,10 @@ export async function createRankedGameSession(
   }
 
   const seed = randomInt(0, 0x1_0000_0000)
-  const stashUnlocked = resolveStashUnlockedForNewGame(parseStoredPlayer((await userRef.get()).data()), request.stashUnlocked)
+  // Ván "Không bế tắc" là chế độ biến thể: ô cất khoá đầu ván như client (variantGameState) → replay khớp tuyệt đối.
+  const stashUnlocked =
+    request.mode === "logic" ? false : resolveStashUnlockedForNewGame(parseStoredPlayer((await userRef.get()).data()), request.stashUnlocked)
   await sessionRef.set(session(seed, stashUnlocked, null))
-  return { gameId: sessionRef.id, seed, stashUnlocked, mode: "classic", day: null, challenge: null }
+  // classic và logic ("Không bế tắc") cấp seed như nhau; biến thể suy từ mode khi replay.
+  return { gameId: sessionRef.id, seed, stashUnlocked, mode: request.mode === "logic" ? "logic" : "classic", day: null, challenge: null }
 }

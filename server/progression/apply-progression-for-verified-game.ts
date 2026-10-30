@@ -47,6 +47,8 @@ export interface ProgressionInput {
   todayGames1000: number
   /** Số ngày đạt ★★★ thử thách, đã gồm hôm nay nếu vừa đạt. */
   dailyThreeStarDays: number
+  /** Ván nghi bot / tài khoản bị khoá: chỉ XP cơ bản — không nhiệm vụ, thành tích, Bậc, sao màn, quà mời bạn. */
+  flagged?: boolean
 }
 
 export interface InviterReward {
@@ -112,8 +114,9 @@ function rewardForInviter(inviter: StoredPlayer): InviterReward {
  */
 export function applyProgressionForVerifiedGame(input: ProgressionInput): ProgressionResult {
   const { stored, stats, streak, summary } = input
+  const flagged = input.flagged === true
 
-  const missions = advanceDailyMissions(
+  const missions = flagged ? { progress: input.missionProgress, completed: [] } : advanceDailyMissions(
     dailyMissionsForDay(input.missionDay, input.missionBand, input.missionReplacedSlot),
     input.missionProgress,
     {
@@ -140,32 +143,30 @@ export function applyProgressionForVerifiedGame(input: ProgressionInput): Progre
   const levelCoins = (level - levelBefore) * COINS_PER_LEVEL_UP
 
   // Màn chơi: xu cho mỗi sao mới (lần đầu qua màn, rồi mỗi lần thêm sao), không thưởng lại sao đã có.
-  const levelResult = input.level ?? null
+  const levelResult = flagged ? null : (input.level ?? null)
   const previousStars = levelResult ? (stored.levelStars[String(levelResult.id)] ?? 0) : 0
   const levelImproved = levelResult !== null && levelResult.stars > previousStars
   const levelStars = levelImproved ? { ...stored.levelStars, [String(levelResult.id)]: levelResult.stars } : stored.levelStars
   const levelStarCoins = levelImproved ? (levelResult.stars - previousStars) * COINS_PER_LEVEL_STAR : 0
 
   // Bậc: thưởng một lần cho mỗi Bậc lần đầu đạt (kể cả Bậc bị bỏ qua khi lên thẳng nhiều Bậc).
-  const reachedTiers = newlyReachedTiers(input.tierAfter, stored.tierRewardsClaimed)
+  const reachedTiers = flagged ? [] : newlyReachedTiers(input.tierAfter, stored.tierRewardsClaimed)
   const tierRewardsClaimed = [...stored.tierRewardsClaimed, ...reachedTiers]
   const tierCoins = tierRewardCoins(reachedTiers)
 
-  const achieved = newlyMetAchievements(
-    stored.achievements,
-    achievementStateFor(stored, {
-      stats,
-      bestStreak: streak.best,
-      level,
-      levelStarsTotal: totalLevelStars(levelStars),
-      highestTier: highestTier(tierRewardsClaimed),
-      todayGames1000: input.todayGames1000,
-      dailyThreeStarDays: input.dailyThreeStarDays,
-    })
-  )
+  const achievementState = achievementStateFor(stored, {
+    stats,
+    bestStreak: streak.best,
+    level,
+    levelStarsTotal: totalLevelStars(levelStars),
+    highestTier: highestTier(tierRewardsClaimed),
+    todayGames1000: input.todayGames1000,
+    dailyThreeStarDays: input.dailyThreeStarDays,
+  })
+  const achieved = flagged ? [] : newlyMetAchievements(stored.achievements, achievementState)
   const achievementCoins = achieved.reduce((sum, item) => sum + item.coins, 0)
 
-  const referral = referralIsDue(stored, summary.moveCount)
+  const referral = !flagged && referralIsDue(stored, summary.moveCount)
   const referralCoins = referral ? REFERRAL_COINS : 0
   const unlockedThemes =
     referral && !stored.unlockedThemes.includes(REFERRAL_THEME) ? [...stored.unlockedThemes, REFERRAL_THEME] : stored.unlockedThemes
@@ -179,7 +180,7 @@ export function applyProgressionForVerifiedGame(input: ProgressionInput): Progre
       achievements: [...stored.achievements, ...achieved.map((item) => item.id)],
       unlockedThemes,
       referralRewarded: stored.referralRewarded || referral,
-      referralGames: referralGamesAfter(stored, summary.moveCount),
+      referralGames: flagged ? stored.referralGames : referralGamesAfter(stored, summary.moveCount),
       levelStars,
       tierRewardsClaimed,
     },

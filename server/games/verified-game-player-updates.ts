@@ -25,9 +25,11 @@ export function verifiedGamePlayerUpdates(input: {
   firstDailyRun: boolean
   missionDay: MissionDay
   dailyReward: DailyRunGameReward | null
+  /** Ván bị gắn cờ nghi bot: không tính phong độ. */
+  suspect?: boolean
 }) {
   const { stored, summary, missionDay, dailyReward } = input
-  const recentFormScores = countsTowardForm(input.mode, input.countsForDaily, input.firstDailyRun, summary.moveCount)
+  const recentFormScores = !input.suspect && countsTowardForm(input.mode, input.countsForDaily, input.firstDailyRun, summary.moveCount)
     ? withRecentFormScore(stored.recentFormScores, summary.score)
     : stored.recentFormScores
   // Lượt này làm ngày thử thách lần đầu đạt ★★★.

@@ -7,6 +7,6 @@ export async function POST(request: Request) {
   return handleJsonRoute(async () => {
     const uid = await requireUid(request)
     const body = await readJsonBody(request, submitRankedGameRequestSchema, MAX_REQUEST_BODY_BYTES)
-    return recordSubmittedRankedGame(uid, body.gameId, body.actions)
+    return recordSubmittedRankedGame(uid, body.gameId, body.actions, body.times)
   })
 }

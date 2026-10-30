@@ -1,6 +1,6 @@
 "use client"
 
-import { TargetIcon } from "lucide-react"
+import { BrainIcon, TargetIcon } from "lucide-react"
 
 import { useI18n } from "@/lib/i18n"
 import { useBlockPuzzleGameStore } from "@/modules/block-puzzle/store/block-puzzle-game-store"
@@ -33,11 +33,23 @@ function LevelBadge({ definition }: { definition: LevelDefinition }) {
   )
 }
 
+/** Chế độ "Không bế tắc": nhắc luật một dòng. */
+function LogicBadge() {
+  const { t } = useI18n()
+  return (
+    <p className={BADGE}>
+      <BrainIcon className="size-3.5" aria-hidden="true" />
+      {t("logic.badge")}
+    </p>
+  )
+}
+
 /** Nhãn dưới HUD: màn chơi (tiến độ + số nước còn lại) / đấu 1v1 (bàn mini của đối thủ). */
 export function VariantModeBadge() {
   const run = useBlockPuzzleGameStore((state) => state.variantRun)
   if (!run) return null
   if (run.kind === "duel") return <DuelOpponentStrip run={run} />
+  if (run.kind === "logic") return <LogicBadge />
 
   const definition = findLevel(run.levelId)
   return definition ? <LevelBadge definition={definition} /> : null

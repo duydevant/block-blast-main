@@ -5,6 +5,7 @@ import { toast } from "sonner"
 
 import { isRealtimeDatabaseConfigured } from "@/lib/firebase/firebase-client-app"
 import { useI18n } from "@/lib/i18n"
+import { withoutActionTime } from "@/modules/block-puzzle/engine/recorded-action-timing"
 import { useBlockPuzzleGameStore } from "@/modules/block-puzzle/store/block-puzzle-game-store"
 import { useSignedInUid } from "@/modules/player-profile/use-player-profile-query"
 
@@ -64,7 +65,8 @@ export function useDuelMoveStream(): void {
       const pushNew = () => {
         if (written < 0 || stopped) return
         const { actionLog, game } = useBlockPuzzleGameStore.getState()
-        for (; written < actionLog.length; written++) write(written, actionLog[written])
+        // RTDB rules từ chối field lạ → bỏ thời điểm `t` của log local.
+        for (; written < actionLog.length; written++) write(written, withoutActionTime(actionLog[written]))
         if (game?.endedEarly && written === actionLog.length) write(written++, DUEL_END_ACTION)
       }
       // Nước đã lên RTDB trước đó (tải lại trang giữa ván) → ghi tiếp từ chỗ còn thiếu (thử lại khi mạng lỗi).

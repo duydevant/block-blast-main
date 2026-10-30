@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware"
 
 import { gameReducer } from "../engine/game-state-reducer"
 import type { GameState } from "../engine/game-types"
+import { withActionTime } from "../engine/recorded-action-timing"
 import { MAX_RECORDED_ACTIONS, type RecordedGameAction } from "../engine/replay-recorded-game-actions"
 import {
   EMPTY_RANKED_GAME_CLOUD_STATE,
@@ -73,7 +74,8 @@ export const useBlockPuzzleGameStore = create<BlockPuzzleGameStore>()(
         if (!game) return false
         const next = gameReducer(game, action)
         if (next === game) return false
-        const actions = [...actionLog, action]
+        // Kèm thời điểm (chỉ để server phát hiện bot / replay theo nhịp thật, không ảnh hưởng điểm).
+        const actions = [...actionLog, withActionTime(action)]
         // Log vượt giới hạn server nhận → ván này thành offline thay vì bị server từ chối rồi mất.
         const tooLong = actions.length > MAX_RECORDED_ACTIONS && rankedSession !== null && !rankedSession.queued
         set({ game: next, best: Math.max(best, next.score), actionLog: actions, ...(tooLong ? { rankedSession: null } : {}) })

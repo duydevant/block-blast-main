@@ -27,7 +27,7 @@ export const YEARS_SUBCOLLECTION = "years"
 
 const count = z.number().int().nonnegative().catch(0)
 const idList = z.array(z.string()).catch([])
-const RANKED_MODES = ["classic", "daily", "challenge", "level", "duel"] as const
+const RANKED_MODES = ["classic", "daily", "challenge", "level", "duel", "logic"] as const
 const modeStatsSchema = z.object({ games: count, best: count, total: count })
 
 const storedPlayerSchema = z.object({
@@ -80,6 +80,10 @@ const storedPlayerSchema = z.object({
   statsByMode: z.partialRecord(z.enum(RANKED_MODES), modeStatsSchema).catch({}),
   /** Số ngày thử thách đạt ★★★. */
   dailyThreeStarDays: count,
+  /** Khoá thủ công (console) sau khi xác nhận gian lận: không vào BXH, không nhận xu. */
+  banned: z.boolean().catch(false),
+  /** Replay của ván kỷ lục cá nhân (giữ vĩnh viễn). */
+  bestReplayId: z.string().nullable().catch(null),
 })
 
 /** Field người dùng được ghi trong users/{uid}; doc thiếu/hỏng field nào thì field đó về mặc định. */
@@ -106,6 +110,8 @@ const EMPTY_STORED_PLAYER: StoredPlayer = {
   tierRewardsClaimed: [],
   statsByMode: {},
   dailyThreeStarDays: 0,
+  banned: false,
+  bestReplayId: null,
 }
 
 export function parseStoredPlayer(data: unknown): StoredPlayer {

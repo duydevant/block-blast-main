@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import type { LeaderboardRow } from "@/modules/leaderboard/leaderboard-types"
 
 import { ALLTIME_BOARD_ID, boardIdForPeriod, boardIdsForRankedGame } from "./leaderboard-board-ids"
-import { mergeScoreIntoTopList, standingFromTop } from "./merge-score-into-top-list"
+import { mergeScoreIntoTopList, replaceScoreInTopList, standingFromTop } from "./merge-score-into-top-list"
 
 const row = (uid: string, score: number): LeaderboardRow => ({ uid, displayName: null, score })
 
@@ -57,5 +57,23 @@ describe("board ids", () => {
     expect(boardIdsForRankedGame("duel", now, null, false)).toEqual([])
     expect(boardIdsForRankedGame("level", now, null, false)).toEqual([])
     expect(boardIdsForRankedGame("daily", now, "20261026", false)).toEqual([])
+  })
+})
+
+describe("replaceScoreInTopList", () => {
+  const top = [row("a", 900), row("b", 500), row("c", 300)]
+
+  it("moves a player down when the value drops", () => {
+    expect(replaceScoreInTopList(top, row("a", 400))?.map((item) => `${item.uid}:${item.score}`)).toEqual(["b:500", "a:400", "c:300"])
+  })
+
+  it("drops a player who falls below a full top list", () => {
+    expect(replaceScoreInTopList(top, row("a", 100), 3)?.map((item) => item.uid)).toEqual(["b", "c"])
+    expect(replaceScoreInTopList(top, row("z", 100), 3)).toBeNull()
+  })
+
+  it("inserts newcomers and ignores unchanged rows", () => {
+    expect(replaceScoreInTopList(top, row("d", 600))?.map((item) => item.uid)).toEqual(["a", "d", "b", "c"])
+    expect(replaceScoreInTopList(top, row("b", 500))).toBeNull()
   })
 })

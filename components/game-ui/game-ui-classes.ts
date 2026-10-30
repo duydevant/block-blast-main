@@ -46,6 +46,13 @@ export const MODE_THEME = {
     accentText: "text-[#c86bfa]",
     button: `${CHUNKY} bg-[#c86bfa] text-[#22062f] shadow-[0_5px_0_#8a35bf] hover:brightness-105`,
   },
+  logic: {
+    card: "bg-[#2a1748]",
+    icon: "bg-[#c86bfa] text-[#22062f]",
+    soft: "text-[#dcb6f5]",
+    accentText: "text-[#c86bfa]",
+    button: `${CHUNKY} bg-[#c86bfa] text-[#22062f] shadow-[0_5px_0_#8a35bf] hover:brightness-105`,
+  },
   ranking: {
     card: "bg-[#10322f]",
     icon: "bg-[#2ec4b6] text-[#04211e]",

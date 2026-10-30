@@ -3,7 +3,7 @@ import { startChallengeGame } from "@/modules/challenge/challenge-game-actions"
 import { CHALLENGE_ID_PATTERN } from "@/modules/challenge/challenge-types"
 import { DUEL_ID_PATTERN } from "@/modules/duel/duel-types"
 import { findLevel } from "@/modules/game-modes/level-catalog"
-import { startDuelGame, startLevelGame } from "@/modules/game-modes/start-variant-game"
+import { startDuelGame, startLevelGame, startLogicGame } from "@/modules/game-modes/start-variant-game"
 
 import { useBlockPuzzleGameStore } from "./store/block-puzzle-game-store"
 import { type GameModeSlot, modeSlotOf, type ParkedGame } from "./store/parked-mode-games"
@@ -12,6 +12,7 @@ import { startDailyChallenge } from "./store/start-daily-challenge"
 /** Chế độ người chơi muốn vào (từ link `/play?…` hoặc menu). */
 export type SpecialMode =
   | { kind: "endless" }
+  | { kind: "logic" }
   | { kind: "daily" }
   | { kind: "challenge"; id: string }
   | { kind: "level"; id: number }
@@ -21,6 +22,7 @@ export type SpecialMode =
 export function modeFromQuery(search: string): SpecialMode | null {
   const params = new URLSearchParams(search)
   if (params.has("endless")) return { kind: "endless" }
+  if (params.has("logic")) return { kind: "logic" }
   const challengeId = params.get("challenge")
   if (challengeId && CHALLENGE_ID_PATTERN.test(challengeId)) return { kind: "challenge", id: challengeId }
   const duelId = params.get("duel")
@@ -42,6 +44,7 @@ function gameMatchesMode(game: Pick<ParkedGame, "dailyDay" | "challenge" | "vari
   if (mode.kind === "daily") return game.dailyDay === dayKeyFor(now)
   if (mode.kind === "level") return game.variantRun?.kind === "level" && game.variantRun.levelId === mode.id
   if (mode.kind === "challenge") return game.challenge?.id === mode.id
+  if (mode.kind === "logic") return game.variantRun?.kind === "logic"
   return mode.kind === "endless"
 }
 
@@ -65,6 +68,7 @@ export function canResumeMode(mode: SpecialMode): boolean {
 /** Xin ván mới của chế độ (server cấp seed); "practice" = lượt luyện tập thử thách ngày. */
 async function startFreshMode(mode: SpecialMode): Promise<"practice" | void> {
   if (mode.kind === "endless") return useBlockPuzzleGameStore.getState().startNewGame()
+  if (mode.kind === "logic") return startLogicGame()
   if (mode.kind === "challenge") return startChallengeGame(mode.id)
   if (mode.kind === "duel") return startDuelGame(mode.id)
   if (mode.kind === "level") return void (await startLevelGame(mode.id))
@@ -95,6 +99,7 @@ export async function enterMode(mode: SpecialMode): Promise<"practice" | void> {
 export async function restartCurrentMode(): Promise<"practice" | void> {
   const { variantRun, dailyDay, challenge, startNewGame } = useBlockPuzzleGameStore.getState()
   if (variantRun?.kind === "level") return void (await startLevelGame(variantRun.levelId))
+  if (variantRun?.kind === "logic") return startLogicGame()
   if (dailyDay) return (await startDailyChallenge()) === "practice" ? "practice" : undefined
   if (challenge) return startChallengeGame(challenge.id)
   startNewGame()

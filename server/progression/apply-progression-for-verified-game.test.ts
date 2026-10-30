@@ -167,3 +167,22 @@ describe("tier rewards", () => {
     expect(again.rewards.tierUp).toBeNull()
   })
 })
+
+describe("flagged games", () => {
+  it("only keep base XP: no missions, achievements, tiers, level stars or referral progress", () => {
+    const missions = dailyMissionsForDay(DAY)
+    const almostDone = Object.fromEntries(missions.map((item) => [item.id, item.target - 1]))
+    const stored = parseStoredPlayer({ referredBy: "inviter", referralGames: 2 })
+    const result = applyProgressionForVerifiedGame(
+      input({ stored, missionProgress: almostDone, tierAfter: "gold", level: { id: 1, stars: 3 }, flagged: true })
+    )
+    expect(result.rewards.missions).toEqual([])
+    expect(result.missionProgress).toEqual(almostDone)
+    expect(result.rewards.achievements).toEqual([])
+    expect(result.rewards.tierUp).toBeNull()
+    expect(result.rewards.level).toBeNull()
+    expect(result.rewards.referralBonus).toBe(false)
+    expect(result.playerFields.referralGames).toBe(2)
+    expect(result.rewards.xp).toBe(15)
+  })
+})

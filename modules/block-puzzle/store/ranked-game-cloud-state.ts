@@ -118,6 +118,7 @@ const rankedStateSchema = z.object({
   variantRun: z
     .discriminatedUnion("kind", [
       z.object({ kind: z.literal("level"), levelId: z.number().int().min(1).max(LEVEL_COUNT) }),
+      z.object({ kind: z.literal("logic") }),
       z.object({
         kind: z.literal("duel"),
         duelId: z.string().regex(DUEL_ID_PATTERN),

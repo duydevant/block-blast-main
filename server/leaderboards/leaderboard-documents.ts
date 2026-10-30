@@ -15,9 +15,16 @@ const topSchema = z.array(
       .refine((value): value is PlayerTierId => PLAYER_TIER_IDS.includes(value as PlayerTierId))
       .optional()
       .catch(undefined),
+    replayId: z.string().max(40).optional().catch(undefined),
+    tag: z.string().max(16).optional().catch(undefined),
   })
   // Bỏ hẳn key `tier` khi thiếu/không hợp lệ: ghi lại `undefined` vào Firestore sẽ làm hỏng cả transaction.
-  .transform(({ tier, ...row }): LeaderboardRow => (tier ? { ...row, tier } : row))
+  .transform(({ tier, replayId, tag, ...row }): LeaderboardRow => ({
+    ...row,
+    ...(tier ? { tier } : {}),
+    ...(replayId ? { replayId } : {}),
+    ...(tag ? { tag } : {}),
+  }))
 )
 
 export function leaderboardRef(db: Firestore, boardId: string) {

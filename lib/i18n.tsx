@@ -13,6 +13,8 @@ import { pwaEn, pwaVi } from "@/modules/pwa/pwa-translations"
 import { howToPlayEn, howToPlayVi } from "@/modules/seo/how-to-play-translations"
 import { gameModesEn, gameModesVi } from "@/modules/game-modes/game-modes-translations"
 import { gameSettingsEn, gameSettingsVi } from "@/modules/block-puzzle/game-settings-translations"
+import { analysisEn, analysisVi } from "@/modules/analysis/analysis-translations"
+import { replayEn, replayVi } from "@/modules/replay/replay-translations"
 import { uiEn, uiVi } from "./ui-translations"
 
 import { type Locale, locales } from "./i18n-locales"
@@ -48,6 +50,8 @@ const en = {
   ...howToPlayEn,
   ...gameModesEn,
   ...gameSettingsEn,
+  ...analysisEn,
+  ...replayEn,
   ...uiEn,
 } as const
 
@@ -81,6 +85,8 @@ const vi: TranslationDictionary = {
   ...howToPlayVi,
   ...gameModesVi,
   ...gameSettingsVi,
+  ...analysisVi,
+  ...replayVi,
   ...uiVi,
 }
 

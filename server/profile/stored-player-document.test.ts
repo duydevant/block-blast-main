@@ -40,6 +40,8 @@ describe("parseStoredPlayer", () => {
       tierRewardsClaimed: [],
       statsByMode: {},
       dailyThreeStarDays: 0,
+      banned: false,
+      bestReplayId: null,
     })
   })
 

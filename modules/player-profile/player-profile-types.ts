@@ -84,9 +84,9 @@ export const EMPTY_DAILY_STREAK: DailyStreak = { current: 0, best: 0, lastDailyD
 
 /**
  * classic: seed ngẫu nhiên; daily: seed chung của ngày; challenge: seed của ván người thách đấu;
- * level: màn chơi (seed + bàn cố định); duel: đấu 1v1 cùng seed.
+ * level: màn chơi (seed + bàn cố định); duel: đấu 1v1 cùng seed; logic: "Không bế tắc" (khay luôn có lối đi).
  */
-export type RankedGameMode = "classic" | "daily" | "challenge" | "level" | "duel"
+export type RankedGameMode = "classic" | "daily" | "challenge" | "level" | "duel" | "logic"
 
 export const EMPTY_PLAYER_STATS: PlayerStats = {
   gamesPlayed: 0,
@@ -158,6 +158,10 @@ export interface GameRewards {
   daily?: DailyRunGameReward | null
   /** Bậc vừa lần đầu đạt được ở ván này (cao nhất nếu lên nhiều Bậc); xu thưởng đã gộp vào `coins`. */
   tierUp?: PlayerTierId | null
+  /** Ván bị gắn cờ (nhịp chơi bất thường / tài khoản bị khoá): không vào BXH, không xu. */
+  flagged?: boolean
+  /** Ván được lưu replay (kỷ lục / lọt top) → xem lại tại /game/{replayId}. */
+  replayId?: string | null
 }
 
 export interface DailyRunGameReward {

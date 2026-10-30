@@ -39,6 +39,24 @@ export async function startLevelGame(levelId: number): Promise<"ranked" | "offli
   return "offline"
 }
 
+/** Chế độ "Không bế tắc": có mạng thì ván tính điểm (BXH riêng), không thì chơi offline với seed ngẫu nhiên. */
+export async function startLogicGame(): Promise<void> {
+  const run = { kind: "logic" as const }
+  const uid = signedInUid()
+  if (uid) {
+    try {
+      const issued = await requestStart(uid, { mode: "logic" })
+      if (issued.mode === "logic" && issued.gameId) {
+        useBlockPuzzleGameStore.getState().startVariantGame({ gameId: issued.gameId, uid, seed: issued.seed, run })
+        return
+      }
+    } catch (error) {
+      console.warn("[logic] online start failed, playing offline", error)
+    }
+  }
+  useBlockPuzzleGameStore.getState().startVariantGame({ gameId: null, uid: null, seed: Math.floor(Math.random() * 0x1_0000_0000), run })
+}
+
 /** Ván đấu 1v1: chỉ khi trận đang diễn ra (server kiểm thành viên + giờ). */
 export async function startDuelGame(duelId: string): Promise<void> {
   const uid = signedInUid()

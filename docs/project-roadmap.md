@@ -86,6 +86,16 @@ Plan: `plans/261029-2025-ap-dung-minesweeper-online-vao-block-blast/` (phase 01 
 - Cài đặt nâng khối, mù màu, giảm chuyển động, tắt tô dòng; chơi bằng bàn phím.
 - Cần làm ở host: TTL `games.expireAt`, deploy `firestore.indexes.json`.
 
+## v2.7 — Bằng chứng kỷ lục, BXH đa hạng mục, Không bế tắc, Phase 02 (2026-10-29)
+
+- Replay: kỷ lục / lọt top tự lưu, tự lưu thêm tối đa 20 ván; trang `/game/{id}` (phát/dừng, tua, ×1/×2/×4, phím ← →), hồ sơ công khai `/u/{tag}`, link từ BXH.
+- BXH 6 hạng mục: Điểm, Phong độ, Thuần, Combo, Sao, Không bế tắc.
+- Chống bot theo nhịp chơi + báo cáo replay; giữ thưởng hạng tuần khi bị báo cáo.
+- Chế độ "Không bế tắc" (khay luôn có lối đi), bảng riêng.
+- "Vì sao thua?" sau ván: nước quyết định + gợi ý; thống kê xui/sai ở hồ sơ.
+- Cần làm ở host: TTL `gameReplays.expireAt`, deploy `firestore.indexes.json`, cron `rebuild-leaderboards` (Vercel đã khai trong `vercel.json`, Docker trong `docker/daily-reminder-cron.sh`).
+- Ngay sau khi deploy: chạy `npx vite-node --config vitest.config.ts scripts/backfill-form-and-stars-leaderboards.ts` (chạy thử) rồi thêm `--write` để điền sẵn bảng Phong độ + Sao từ `gameSessions` cũ (≤ 30 ngày) và `levelStars`. Mỗi người chỉ gộp 1 lần (`formBackfilledAt`).
+
 ## Còn mở
 
 - QA trên điện thoại thật (Android Chrome, iOS Safari), cả dọc và ngang.

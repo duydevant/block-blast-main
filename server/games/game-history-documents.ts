@@ -56,7 +56,7 @@ export function yearCounterUpdate(summary: ReplaySummary, mode: RankedGameMode, 
 
 /** Đọc lại doc lịch sử (doc hỏng → bỏ qua). */
 export const storedHistorySchema = z.object({
-  mode: z.enum(["classic", "daily", "challenge", "level", "duel"]),
+  mode: z.enum(["classic", "daily", "challenge", "level", "duel", "logic"]),
   score: z.number().int().nonnegative(),
   moveCount: z.number().int().nonnegative(),
   linesCleared: z.number().int().nonnegative().catch(0),
