@@ -105,7 +105,8 @@ const vi: TranslationDictionary = {
   ...uiVi,
 }
 
-const dictionaries: Record<Locale, TranslationDictionary> = { en, vi }
+/** Xuất cho test kiểm key dịch sinh động (`achievement.${id}`…). */
+export const dictionaries: Record<Locale, TranslationDictionary> = { en, vi }
 const localeTags: Record<Locale, string> = { en: "en-US", vi: "vi-VN" }
 
 function isLocale(value: string | null | undefined): value is Locale {
@@ -152,8 +153,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       } catch {}
     }
 
+    // Key thiếu (key sinh động ép kiểu) → rơi về tiếng Anh rồi về chính key, không làm sập cả trang.
     const t = (key: TranslationKey, values: Record<string, string | number> = {}) =>
-      dictionaries[locale][key].replace(/\{(\w+)\}/g, (match, name: string) =>
+      (dictionaries[locale][key] ?? dictionaries.en[key] ?? key).replace(/\{(\w+)\}/g, (match, name: string) =>
         values[name] === undefined ? match : String(values[name])
       )
 
