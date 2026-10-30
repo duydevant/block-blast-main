@@ -63,5 +63,8 @@ Cấp quyền một lần: Google Cloud Console → IAM → service account tron
 - **Cloud Datastore Index Admin** (index + TTL Firestore)
 - **Firebase Rules Admin** (rules Firestore)
 - **Firebase Realtime Database Admin** (rules RTDB)
+- **Service Usage Consumer** (firebase-tools kiểm tra API đã bật trước khi deploy)
+
+Lệnh tương đương: `gcloud projects add-iam-policy-binding <project> --member="serviceAccount:<email>" --role=<role>` với `roles/datastore.indexAdmin`, `roles/firebaserules.admin`, `roles/firebasedatabase.admin`, `roles/serviceusage.serviceUsageConsumer`. Chạy thử riêng service: `docker compose up firebase-deploy`.
 
 Thiếu quyền thì log báo `403` / `PERMISSION_DENIED`; app vẫn chạy, chỉ là index/rules chưa được cập nhật.
