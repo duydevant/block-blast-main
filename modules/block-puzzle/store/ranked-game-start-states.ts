@@ -1,7 +1,7 @@
 import { createNewGame } from "../engine/game-state-reducer"
-import type { GameState } from "../engine/game-types"
+import { CURRENT_RULES_VERSION, type GameState } from "../engine/game-types"
 import { createRankedGameStartState } from "../engine/replay-recorded-game-actions"
-import { variantForRun } from "@/modules/game-modes/variant-run"
+import { variantForRun, withRulesVersion } from "@/modules/game-modes/variant-run"
 
 import type { IssuedChallengeStart, IssuedDailyStart, IssuedVariantStart, PendingSubmission, RankedGameCloudState } from "./ranked-game-cloud-state"
 
@@ -33,8 +33,8 @@ export function freshGameState(state: GameStoreSnapshot): GameStorePatch {
   const issued = state.nextRankedSeed
   // Ô cất đã mở thì giữ cho các ván sau; lượt đổi khay reset mỗi ván.
   const game = issued
-    ? createRankedGameStartState(issued)
-    : { ...createNewGame(randomSeed()), stashUnlocked: state.game?.stashUnlocked ?? false }
+    ? createRankedGameStartState({ ...issued, variant: withRulesVersion(undefined, issued.rulesVersion) })
+    : { ...createNewGame(randomSeed(), { rulesVersion: CURRENT_RULES_VERSION }), stashUnlocked: state.game?.stashUnlocked ?? false }
   return {
     game,
     actionLog: [],
@@ -50,7 +50,7 @@ export function freshGameState(state: GameStoreSnapshot): GameStorePatch {
 /** Ván thử thách hằng ngày: seed chung của ngày, ô cất khoá; giữ nguyên seed classic dự phòng. */
 export function dailyGameState(state: GameStoreSnapshot, start: IssuedDailyStart): GameStorePatch {
   return {
-    game: createRankedGameStartState({ seed: start.seed, stashUnlocked: false }),
+    game: createRankedGameStartState({ seed: start.seed, stashUnlocked: false, variant: withRulesVersion(undefined, start.rulesVersion) }),
     actionLog: [],
     rankedSession: start.gameId ? { gameId: start.gameId, uid: start.uid, queued: false } : null,
     pendingSubmissions: withCurrentGameQueued(state),
@@ -63,7 +63,7 @@ export function dailyGameState(state: GameStoreSnapshot, start: IssuedDailyStart
 /** Ván nhận thách đấu: đúng seed + ô cất của ván người thách; giữ nguyên seed classic dự phòng. */
 export function challengeGameState(state: GameStoreSnapshot, start: IssuedChallengeStart): GameStorePatch {
   return {
-    game: createRankedGameStartState(start),
+    game: createRankedGameStartState({ ...start, variant: withRulesVersion(undefined, start.rulesVersion) }),
     actionLog: [],
     rankedSession: { gameId: start.gameId, uid: start.uid, queued: false },
     pendingSubmissions: withCurrentGameQueued(state),

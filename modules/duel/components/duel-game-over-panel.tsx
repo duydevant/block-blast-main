@@ -41,7 +41,7 @@ export function DuelGameOverPanel({ run }: { run: DuelRun }) {
   const myLocalScore = useBlockPuzzleGameStore((state) => state.game?.score ?? 0)
   const endedEarly = useBlockPuzzleGameStore((state) => state.game?.endedEarly ?? false)
   const { state, now } = useDuelMatch(run.duelId, run.clockOffset)
-  const opponentBoard = useDuelBoard(run.duelId, duelRoundKey(run.round), run.seed, run.opponent.uid)
+  const opponentBoard = useDuelBoard(run.duelId, duelRoundKey(run.round), run.seed, run.opponent.uid, run.rulesVersion)
   // Key theo ván: ván đấu mới không thừa hưởng trạng thái "đã hiện" của ván trước.
   const overKey = over ? `${run.duelId}:${run.round}` : null
   const [revealedKey, setRevealedKey] = useState<string | null>(null)

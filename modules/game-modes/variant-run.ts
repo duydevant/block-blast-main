@@ -1,4 +1,4 @@
-import type { GameVariant } from "@/modules/block-puzzle/engine/game-types"
+import type { GameVariant, RulesVersion } from "@/modules/block-puzzle/engine/game-types"
 import type { DuelPlayer } from "@/modules/duel/duel-types"
 
 import type { GhostView } from "@/modules/ranked/ranked-types"
@@ -19,6 +19,8 @@ export type VariantRun =
       /** Giờ server trận kết thúc (3 phút). */
       endsAt: number
       clockOffset: number
+      /** Phiên bản luật của trận (thiếu = 1), cùng phiên bản với bóng ma. */
+      rulesVersion?: RulesVersion
     }
   | {
       /** Một lần thử của lượt Đấu trường (không cất: rời ván = nộp phần đã chơi). */
@@ -42,6 +44,8 @@ export type VariantRun =
       startAt: number
       endsAt: number
       clockOffset: number
+      /** Phiên bản luật của ván trong phòng (thiếu = 1), chung cho hai người. */
+      rulesVersion?: RulesVersion
     }
 
 /** Chế độ "Không bế tắc": bàn thường, mọi khay đều đặt hết được theo một thứ tự nào đó. */
@@ -50,17 +54,27 @@ export const LOGIC_VARIANT: GameVariant = { guaranteedTray: true }
 /** Đấu 1v1: bàn thường, không hồi sinh (chết là dừng, chờ kết quả), không cất / đổi khối. */
 export const DUEL_VARIANT: GameVariant = { noRevive: true, noPowerUps: true }
 
+/** Gắn phiên bản luật vào biến thể; v1 không ghi gì (ván / session cũ giữ nguyên dạng). */
+export function withRulesVersion(variant: GameVariant | undefined, rulesVersion: RulesVersion | undefined): GameVariant | undefined {
+  return rulesVersion === 2 ? { ...variant, rulesVersion } : variant
+}
+
 /** Biến thể ván theo chế độ; id lạ (save cũ/bị sửa) → undefined = ván thường. */
 export function variantForRun(
-  run: { kind: "level"; levelId: number } | { kind: "duel" } | { kind: "ranked" } | { kind: "logic" } | { kind: "arena"; type: string; level: number }
+  run:
+    | { kind: "level"; levelId: number }
+    | { kind: "duel"; rulesVersion?: RulesVersion }
+    | { kind: "ranked"; rulesVersion?: RulesVersion }
+    | { kind: "logic" }
+    | { kind: "arena"; type: string; level: number }
 ): GameVariant | undefined {
   // Trận xếp hạng dùng luật đấu 1v1 (giống RANKED_VARIANT phía server).
-  if (run.kind === "ranked") return DUEL_VARIANT
+  if (run.kind === "ranked") return withRulesVersion(DUEL_VARIANT, run.rulesVersion)
   if (run.kind === "logic") return LOGIC_VARIANT
   if (run.kind === "arena") return findArenaLevel(run.type, run.level)?.variant
   if (run.kind === "level") {
     const definition = findLevel(run.levelId)
     return definition ? levelVariant(definition) : undefined
   }
-  return DUEL_VARIANT
+  return withRulesVersion(DUEL_VARIANT, run.rulesVersion)
 }

@@ -16,7 +16,7 @@ async function loadRoundProgress(id: string, duel: StoredDuel): Promise<Record<s
   const progress: Record<string, DuelPlayerProgress> = {}
   for (const uid of [duel.hostUid, duel.guestUid]) {
     if (!uid) continue
-    const { state } = replayDuelMoves(duel.seed, moves[uid], deadline)
+    const { state } = replayDuelMoves(duel.seed, moves[uid], deadline, duel.rulesVersion)
     progress[uid] = { score: state.score, over: state.isGameOver }
   }
   return progress

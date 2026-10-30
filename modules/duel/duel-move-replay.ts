@@ -1,14 +1,14 @@
 import { gameReducer } from "@/modules/block-puzzle/engine/game-state-reducer"
-import { BOARD_SIZE, type GameState } from "@/modules/block-puzzle/engine/game-types"
+import { BOARD_SIZE, type GameState, type RulesVersion } from "@/modules/block-puzzle/engine/game-types"
 import { recordedActionSchema } from "@/modules/block-puzzle/engine/recorded-action-schema"
 import { createRankedGameStartState, MAX_RECORDED_ACTIONS } from "@/modules/block-puzzle/engine/replay-recorded-game-actions"
-import { DUEL_VARIANT } from "@/modules/game-modes/variant-run"
+import { DUEL_VARIANT, withRulesVersion } from "@/modules/game-modes/variant-run"
 
 import { duelMoveKey, type DuelMoveRecord } from "./duel-types"
 
 /** Bàn đầu ván đấu (cùng cho hai người, người xem và server). */
-export function duelStartState(seed: number): GameState {
-  return createRankedGameStartState({ seed, stashUnlocked: false, variant: DUEL_VARIANT })
+export function duelStartState(seed: number, rulesVersion?: RulesVersion): GameState {
+  return createRankedGameStartState({ seed, stashUnlocked: false, variant: withRulesVersion(DUEL_VARIANT, rulesVersion) })
 }
 
 /**
@@ -40,8 +40,13 @@ export interface DuelReplay {
  * Replay nước đi của một người trong ván: theo thứ tự khoá 0000, 0001…, dừng ở chỗ hở, nước sai, hoặc nước
  * ghi sau `deadline` (giờ server). Server dùng để chấm; kết quả trùng với bàn người xem thấy.
  */
-export function replayDuelMoves(seed: number, records: Record<string, unknown> | null | undefined, deadline = Infinity): DuelReplay {
-  let state = duelStartState(seed)
+export function replayDuelMoves(
+  seed: number,
+  records: Record<string, unknown> | null | undefined,
+  deadline = Infinity,
+  rulesVersion?: RulesVersion
+): DuelReplay {
+  let state = duelStartState(seed, rulesVersion)
   let applied = 0
   for (; applied < MAX_RECORDED_ACTIONS; applied++) {
     const record = records?.[duelMoveKey(applied)] as Partial<DuelMoveRecord> | undefined

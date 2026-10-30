@@ -1,6 +1,7 @@
 import { useFirebaseAuthStore } from "@/lib/auth/firebase-auth-store"
 import { ApiRequestError, fetchJsonWithFirebaseIdToken } from "@/lib/firebase/fetch-json-with-firebase-id-token"
 import { ApiRoutes } from "@/lib/routes"
+import { CURRENT_RULES_VERSION } from "@/modules/block-puzzle/engine/game-types"
 import { useBlockPuzzleGameStore } from "@/modules/block-puzzle/store/block-puzzle-game-store"
 import type { StartRankedGameResponse } from "@/modules/player-profile/player-profile-types"
 
@@ -12,7 +13,12 @@ function signedInUid(): string | null {
 }
 
 async function requestStart(uid: string, body: Record<string, unknown>): Promise<StartRankedGameResponse> {
-  return fetchJsonWithFirebaseIdToken<StartRankedGameResponse>(ApiRoutes.GAMES_START, { method: "POST", body, expectedUid: uid })
+  // Khai luật client chơi được; server chỉ cấp luật mới cho client khai (Màn / Đấu trường / Không bế tắc bỏ qua).
+  return fetchJsonWithFirebaseIdToken<StartRankedGameResponse>(ApiRoutes.GAMES_START, {
+    method: "POST",
+    body: { ...body, rulesVersion: CURRENT_RULES_VERSION },
+    expectedUid: uid,
+  })
 }
 
 /**
@@ -101,7 +107,11 @@ export async function startRankedMatch(): Promise<void> {
   let issued: StartRankedGameResponse | null = null
   for (let attempt = 0; issued === null; attempt++) {
     try {
-      issued = await fetchJsonWithFirebaseIdToken<StartRankedGameResponse>(ApiRoutes.RANKED_MATCH, { method: "POST", expectedUid: uid })
+      issued = await fetchJsonWithFirebaseIdToken<StartRankedGameResponse>(ApiRoutes.RANKED_MATCH, {
+        method: "POST",
+        body: { rulesVersion: CURRENT_RULES_VERSION },
+        expectedUid: uid,
+      })
     } catch (error) {
       if (!(error instanceof ApiRequestError && error.code === "match-pending") || attempt >= ARENA_PENDING_RETRIES) throw error
       await new Promise((resolve) => setTimeout(resolve, ARENA_PENDING_DELAY_MS))
@@ -113,7 +123,7 @@ export async function startRankedMatch(): Promise<void> {
     gameId: issued.gameId,
     uid,
     seed: issued.seed,
-    run: { kind: "ranked", seed: issued.seed, ghost, endsAt, clockOffset: serverNow - Date.now() },
+    run: { kind: "ranked", seed: issued.seed, ghost, endsAt, clockOffset: serverNow - Date.now(), rulesVersion: issued.rulesVersion },
   })
 }
 
@@ -128,6 +138,6 @@ export async function startDuelGame(duelId: string): Promise<void> {
     gameId: issued.gameId,
     uid,
     seed: issued.seed,
-    run: { kind: "duel", duelId, round, seed: issued.seed, opponent, startAt, endsAt, clockOffset: serverNow - Date.now() },
+    run: { kind: "duel", duelId, round, seed: issued.seed, opponent, startAt, endsAt, clockOffset: serverNow - Date.now(), rulesVersion: issued.rulesVersion },
   })
 }

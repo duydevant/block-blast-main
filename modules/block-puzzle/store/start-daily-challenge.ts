@@ -1,6 +1,7 @@
 import { useFirebaseAuthStore } from "@/lib/auth/firebase-auth-store"
 import { fetchJsonWithFirebaseIdToken } from "@/lib/firebase/fetch-json-with-firebase-id-token"
 import { ApiRoutes } from "@/lib/routes"
+import { CURRENT_RULES_VERSION } from "@/modules/block-puzzle/engine/game-types"
 import type { StartRankedGameResponse } from "@/modules/player-profile/player-profile-types"
 
 import { useBlockPuzzleGameStore } from "./block-puzzle-game-store"
@@ -18,11 +19,11 @@ export async function startDailyChallenge(): Promise<DailyChallengeStart> {
 
   const issued = await fetchJsonWithFirebaseIdToken<StartRankedGameResponse>(ApiRoutes.GAMES_START, {
     method: "POST",
-    body: { mode: "daily" },
+    body: { mode: "daily", rulesVersion: CURRENT_RULES_VERSION },
     expectedUid: uid,
   })
   if (issued.mode !== "daily" || !issued.day) throw new Error("unexpected-daily-start")
 
-  useBlockPuzzleGameStore.getState().startDailyGame({ gameId: issued.gameId, uid, seed: issued.seed, day: issued.day })
+  useBlockPuzzleGameStore.getState().startDailyGame({ gameId: issued.gameId, uid, seed: issued.seed, day: issued.day, rulesVersion: issued.rulesVersion })
   return issued.gameId ? "ranked" : "practice"
 }

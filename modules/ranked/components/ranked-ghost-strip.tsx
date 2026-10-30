@@ -8,7 +8,7 @@ import { useI18n } from "@/lib/i18n"
 import { useBlockPuzzleGameStore } from "@/modules/block-puzzle/store/block-puzzle-game-store"
 import { duelBoardRows } from "@/modules/duel/duel-move-replay"
 import { formatClock, useVariantRunClock } from "@/modules/game-modes/use-variant-run-clock"
-import { DUEL_VARIANT, type VariantRun } from "@/modules/game-modes/variant-run"
+import { variantForRun, type VariantRun } from "@/modules/game-modes/variant-run"
 import { buildReplayTimeline } from "@/modules/replay/replay-timeline"
 
 import { RANKED_TIME_MS } from "../rating-rules"
@@ -23,7 +23,7 @@ export function RankedGhostStrip({ run }: { run: RankedRun }) {
   const { t, formatNumber } = useI18n()
   const myScore = useBlockPuzzleGameStore((state) => state.game?.score ?? 0)
   const msLeft = useVariantRunClock(run.endsAt, run.clockOffset) ?? 0
-  const timeline = useMemo(() => buildReplayTimeline({ seed: run.seed, stashUnlocked: false, variant: DUEL_VARIANT }, run.ghost.actions), [run.seed, run.ghost.actions])
+  const timeline = useMemo(() => buildReplayTimeline({ seed: run.seed, stashUnlocked: false, variant: variantForRun(run) }, run.ghost.actions), [run])
   const elapsed = RANKED_TIME_MS - msLeft
   const shown = Math.min(timeline.states.length - 1, run.ghost.times.filter((time) => time <= elapsed).length)
   const ghostState = timeline.states[shown]

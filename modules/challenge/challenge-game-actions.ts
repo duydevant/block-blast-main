@@ -2,6 +2,7 @@ import { useFirebaseAuthStore } from "@/lib/auth/firebase-auth-store"
 import { fetchJsonWithFirebaseIdToken } from "@/lib/firebase/fetch-json-with-firebase-id-token"
 import { ApiRoutes, Routes } from "@/lib/routes"
 import { siteConfig } from "@/lib/site"
+import { CURRENT_RULES_VERSION } from "@/modules/block-puzzle/engine/game-types"
 import { useBlockPuzzleGameStore } from "@/modules/block-puzzle/store/block-puzzle-game-store"
 import type { StartRankedGameResponse } from "@/modules/player-profile/player-profile-types"
 
@@ -44,7 +45,7 @@ export async function startChallengeGame(challengeId: string): Promise<void> {
   const uid = signedInUid()
   const issued = await fetchJsonWithFirebaseIdToken<StartRankedGameResponse>(ApiRoutes.GAMES_START, {
     method: "POST",
-    body: { mode: "challenge", challengeId },
+    body: { mode: "challenge", challengeId, rulesVersion: CURRENT_RULES_VERSION },
     expectedUid: uid,
   })
   if (issued.mode !== "challenge" || !issued.gameId || !issued.challenge) throw new Error("unexpected-challenge-start")
@@ -54,5 +55,6 @@ export async function startChallengeGame(challengeId: string): Promise<void> {
     seed: issued.seed,
     stashUnlocked: issued.stashUnlocked,
     opponent: issued.challenge,
+    rulesVersion: issued.rulesVersion,
   })
 }

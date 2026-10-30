@@ -17,6 +17,12 @@ describe("parseSavedGame", () => {
     expect(saved.game?.lastMove).toBeNull()
   })
 
+  it("keeps the rules version and perfect-clear chain of a v2 game", () => {
+    const game = { ...createNewGame(10, { rulesVersion: 2 }), perfectChain: 2, movesSinceBoardClear: 4 }
+    const saved = parseSavedGame(roundTrip({ game, best: 0 }))
+    expect(saved.game).toMatchObject({ rulesVersion: 2, perfectChain: 2, movesSinceBoardClear: 4 })
+  })
+
   it("accepts an empty save", () => {
     expect(parseSavedGame({ game: null, best: 0 })).toEqual({ game: null, best: 0 })
   })

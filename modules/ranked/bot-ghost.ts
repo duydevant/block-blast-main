@@ -5,7 +5,8 @@ import { createRankedGameStartState } from "@/modules/block-puzzle/engine/replay
 import { nextRandom, normalizeSeed } from "@/modules/block-puzzle/engine/seeded-random-generator"
 import { listPlacements } from "@/modules/block-puzzle/engine/tray-solvability-search"
 import { findShape } from "@/modules/block-puzzle/engine/piece-shape-catalog"
-import { DUEL_VARIANT } from "@/modules/game-modes/variant-run"
+import type { RulesVersion } from "@/modules/block-puzzle/engine/game-types"
+import { DUEL_VARIANT, withRulesVersion } from "@/modules/game-modes/variant-run"
 
 import { RANKED_TIME_MS } from "./rating-rules"
 
@@ -25,7 +26,7 @@ export interface GhostGame {
  * Bot làm bóng ma khi chưa có ván người thật cùng trình độ: bot tham lam, thỉnh thoảng đi nước ngẫu nhiên (MMR càng
  * thấp càng hay "nhầm"), nhịp 0.7–1.6 s/nước, dừng khi hết 3 phút. Tất định theo seed (server tạo, client chỉ phát lại).
  */
-export function playBotGhost(seed: number, mmr: number): GhostGame {
+export function playBotGhost(seed: number, mmr: number, rulesVersion?: RulesVersion): GhostGame {
   let rng = normalizeSeed(seed ^ 0x6b43a9b5)
   const random = () => {
     const [value, next] = nextRandom(rng)
@@ -33,7 +34,7 @@ export function playBotGhost(seed: number, mmr: number): GhostGame {
     return value
   }
   const mistakeRate = Math.min(0.5, Math.max(0.02, (1300 - mmr) / 1000))
-  let state = createRankedGameStartState({ seed, stashUnlocked: false, variant: RANKED_VARIANT })
+  let state = createRankedGameStartState({ seed, stashUnlocked: false, variant: withRulesVersion(RANKED_VARIANT, rulesVersion) })
   const actions: number[] = []
   const times: number[] = []
   let clock = 0

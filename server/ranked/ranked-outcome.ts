@@ -1,3 +1,4 @@
+import type { RulesVersion } from "@/modules/block-puzzle/engine/game-types"
 import type { RankedMatchReward } from "@/modules/ranked/ranked-types"
 import { applyMatch, leagueForLp, matchResult, PLACEMENT_GAMES, RANKED_TIME_MS, type RankedRating, ratingForSeason } from "@/modules/ranked/rating-rules"
 import type { StoredPlayer } from "@/server/profile/stored-player-document"
@@ -8,6 +9,8 @@ const RANKED_SUBMIT_GRACE_MS = 30_000
 const RANKED_PLAY_SPAN_SLACK_MS = 3_000
 
 export interface RankedSessionInfo {
+  /** Phiên bản luật của trận (thiếu = 1) — ván vào hồ bóng ma mang theo để chỉ ghép trận cùng luật. */
+  rulesVersion?: RulesVersion
   ghostScore: number
   ghostMmr: number
   ghostUid: string | null

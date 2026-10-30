@@ -23,6 +23,7 @@ import { HowToPlayDialog, RestartConfirmDialog } from "./game-dialogs"
 import { GameOverDialog } from "./game-over-dialog"
 import { GameHudScoreBar } from "./game-hud-score-bar"
 import { GameDragHint } from "./game-drag-hint"
+import { GamePauseDialog, isPausableRun } from "./game-pause-overlay"
 import { GameTutorial } from "./game-tutorial"
 import { useEnforceOwnedColorTheme, useGameRewardToasts } from "./use-progression-side-effects"
 import { useSpecialModeLauncher } from "./use-special-mode-launcher"
@@ -37,6 +38,9 @@ export function BlockPuzzleGameScreen() {
   const finishTutorial = useBlockPuzzleGameStore((state) => state.finishTutorial)
   const [restartOpen, setRestartOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [paused, setPaused] = useState(false)
+  const pausable = useBlockPuzzleGameStore((state) => Boolean(state.game && !state.game.isGameOver) && isPausableRun(state.variantRun))
+  const started = useBlockPuzzleGameStore((state) => (state.game?.moveCount ?? 0) > 0)
   const duelRun = useBlockPuzzleGameStore((state) => (state.variantRun?.kind === "duel" ? state.variantRun : null))
   // Vào bằng link đấu (?duel=…): ván chưa kịp cấp nhưng đã biết là trận đấu → không hiện hướng dẫn chen vào.
   const [openedForDuel] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("duel"))
@@ -67,6 +71,15 @@ export function BlockPuzzleGameScreen() {
   useEffect(() => {
     if (settingsReady && skipTutorial && !seenTutorial) markTutorialSeen()
   }, [settingsReady, skipTutorial, seenTutorial, markTutorialSeen])
+  // Rời tab / tắt màn hình giữa ván → tự tạm dừng, quay lại thấy màn "Chơi tiếp" thay vì bàn đang dở.
+  useEffect(() => {
+    if (!pausable || !started) return
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") setPaused(true)
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => document.removeEventListener("visibilitychange", onVisibility)
+  }, [pausable, started])
   useEnforceOwnedColorTheme()
   usePlayerPresence()
   useLevelRunEffects()
@@ -88,6 +101,7 @@ export function BlockPuzzleGameScreen() {
           onRestart={() => setRestartOpen(true)}
           onShowHowToPlay={() => setHelpOpen(true)}
           onStartDaily={modeLauncher.launchDaily}
+          onPause={pausable ? () => setPaused(true) : undefined}
         />
         <SpecialModeBadge />
         <VariantModeBadge />
@@ -96,6 +110,14 @@ export function BlockPuzzleGameScreen() {
         {duelRun ? <DuelGameOverPanel run={duelRun} /> : <GameOverDialog />}
         {duelRun && <DuelRunController key={`${duelRun.duelId}:${duelRun.round}`} run={duelRun} />}
       </>}
+      <GamePauseDialog
+        open={paused && pausable}
+        onResume={() => setPaused(false)}
+        onRestart={() => {
+          setPaused(false)
+          setRestartOpen(true)
+        }}
+      />
       <RestartConfirmDialog open={restartOpen} onOpenChange={setRestartOpen} />
       {modeLauncher.confirmDialog}
       <HowToPlayDialog

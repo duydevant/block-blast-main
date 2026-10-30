@@ -194,7 +194,7 @@ export async function recordSubmittedRankedGame(
       uid,
       gameId,
       stored,
-      session: { mode, seed, stashUnlocked, levelId, day },
+      session: { mode, seed, stashUnlocked, levelId, day, rulesVersion: session.data.rulesVersion },
       now,
       countsForDaily,
       firstDailyRun,

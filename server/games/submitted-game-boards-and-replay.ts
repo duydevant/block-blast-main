@@ -2,6 +2,8 @@ import "server-only"
 
 import type { FieldValue, Firestore, Transaction } from "firebase-admin/firestore"
 
+import type { RulesVersion } from "@/modules/block-puzzle/engine/game-types"
+
 import type { RecordedGameAction, ReplaySummary } from "@/modules/block-puzzle/engine/replay-recorded-game-actions"
 import type { RankedGameMode } from "@/modules/player-profile/player-profile-types"
 import { totalLevelStars } from "@/modules/progression/achievement-catalog"
@@ -18,7 +20,7 @@ export interface BoardsAndReplayInput {
   uid: string
   gameId: string
   stored: StoredPlayer
-  session: { mode: RankedGameMode; seed: number; stashUnlocked: boolean; levelId: number | null; day: string | null }
+  session: { mode: RankedGameMode; seed: number; stashUnlocked: boolean; levelId: number | null; day: string | null; rulesVersion?: RulesVersion }
   now: Date
   countsForDaily: boolean
   firstDailyRun: boolean

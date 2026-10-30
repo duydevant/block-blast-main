@@ -46,7 +46,7 @@ export async function saveOwnGameReplay(uid: string, gameId: string, actions: Re
     if (stored.banned) throw new HttpError(403, "account-restricted")
     if (savedCount >= MAX_SAVED_REPLAYS) throw new HttpError(409, "replay-limit")
 
-    const { seed, stashUnlocked, mode, levelId } = session.data
+    const { seed, stashUnlocked, mode, levelId, rulesVersion } = session.data
     if (mode === "event") throw new HttpError(409, "game-not-verified")
     if (mode === "arena") throw new HttpError(400, "replay-not-supported")
     const replay = replayRecordedGame({ seed, stashUnlocked, variant: variantForSession(session.data) }, actions)
@@ -61,6 +61,7 @@ export async function saveOwnGameReplay(uid: string, gameId: string, actions: Re
         seed,
         stashUnlocked,
         levelId,
+        rulesVersion,
         actions,
         summary: replay.summary,
         displayName: stored.displayName,

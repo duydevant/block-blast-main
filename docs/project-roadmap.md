@@ -112,6 +112,14 @@ Plan: `plans/261029-2025-ap-dung-minesweeper-online-vao-block-blast/` (phase 01 
 - Cần ở host: index `ghostPool` + rules emote — service `firebase-deploy` trong docker-compose tự deploy mỗi lần `up` (cấp quyền IAM một lần, xem `deployment-guide.md`).
 - Chưa làm: thưởng cuối quý theo giải, hàng chờ đấu realtime, push nhắc tổng kết năm.
 
+## v3.1 — Luật v2 chế độ vô tận + tạm dừng (2026-10-30)
+
+- Chuỗi dọn sạch bàn: +500, dọn tiếp trong ≤ 9 nước ×2…×5 (tối đa +2.500); chữ "Dọn sạch ×n".
+- Bộ chia theo điểm: điểm thấp nhiều khối gỡ bàn / khối nhỏ, điểm cao nhiều khối to (L 3×3, vuông 3×3, thanh 5), vẫn còn ~20% khối gỡ bàn mỗi ô.
+- `rulesVersion` cho từng ván: ván / session / bóng ma / replay cũ vẫn chấm luật v1. Bảng Mọi lúc giữ chung.
+- Bot 300 ván: v1 trung bình 1.186 / 55 nước / 66 lần dọn sạch → v2 2.181 / 72 nước / 161 lần (`npm run balance -- 300 v2`).
+- Tạm dừng / chơi tiếp ở chế độ không tính giờ.
+
 ## Còn mở
 
 - QA trên điện thoại thật (Android Chrome, iOS Safari), cả dọc và ngang.

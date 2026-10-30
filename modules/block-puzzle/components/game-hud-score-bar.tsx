@@ -11,6 +11,7 @@ import { DuelHud } from "@/modules/duel/components/duel-hud"
 import { DuelLeaveButton } from "@/modules/duel/components/duel-leave-button"
 
 import { useBlockPuzzleGameStore } from "../store/block-puzzle-game-store"
+import { GamePauseButton } from "./game-pause-overlay"
 import { GameSettingsMenu } from "./game-settings-menu"
 import { GameStatsDialog, GameThemesDialog } from "./game-themes-and-stats-dialogs"
 import { useAnimatedNumber } from "./use-animated-number"
@@ -19,13 +20,16 @@ interface GameHudScoreBarProps {
   onRestart: () => void
   onShowHowToPlay: () => void
   onStartDaily: () => void
+  /** Có khi chế độ hiện tại tạm dừng được (ván chưa hết): nút trái thành Tạm dừng. */
+  onPause?: () => void
 }
 
 /**
  * Thanh trên màn chơi: về nhà · kỷ lục (mở thống kê) + điểm thật to · menu.
  * Đấu 1v1: giữa là bảng điểm hai bên, Home hỏi trước khi bỏ trận, menu không có ván mới / chế độ khác.
+ * Chế độ tạm dừng được: nút trái là Tạm dừng (về nhà nằm trong màn tạm dừng).
  */
-export function GameHudScoreBar({ onRestart, onShowHowToPlay, onStartDaily }: GameHudScoreBarProps) {
+export function GameHudScoreBar({ onRestart, onShowHowToPlay, onStartDaily, onPause }: GameHudScoreBarProps) {
   const { t, formatNumber } = useI18n()
   const score = useBlockPuzzleGameStore((state) => state.game?.score ?? 0)
   const best = useBlockPuzzleGameStore((state) => state.best)
@@ -39,6 +43,8 @@ export function GameHudScoreBar({ onRestart, onShowHowToPlay, onStartDaily }: Ga
     <header className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 px-4 pt-3 pb-1">
       {inDuel ? (
         <DuelLeaveButton duelId={duelRun.duelId} />
+      ) : onPause ? (
+        <GamePauseButton onPause={onPause} />
       ) : (
         <Link href={Routes.HOME} className={ICON_TILE} aria-label={t("ui.home")}>
           <HomeIcon aria-hidden="true" />

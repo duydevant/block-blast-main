@@ -11,7 +11,7 @@ import { FloatingEmote } from "./duel-emote-bar"
 /** Một bên: bàn trực tiếp (replay nước đi) + điểm (điểm chốt khi ván đã xong) + nhãn trạng thái. */
 function PlayerBoard({ state, player, name, online, emote }: { state: DuelState; player: DuelPlayer; name: string; online: readonly string[] | null; emote: VisibleEmote | null }) {
   const { t, formatNumber } = useI18n()
-  const board = useDuelBoard(state.id, state.roundKey, state.seed, player.uid)
+  const board = useDuelBoard(state.id, state.roundKey, state.seed, player.uid, state.rulesVersion)
   const finished = state.status === "finished"
   const score = state.results[player.uid] ?? board?.state.score ?? 0
   const tag = finished

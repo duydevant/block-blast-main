@@ -16,6 +16,13 @@ export const startRankedGameRequestSchema = z.object({
   levelId: z.number().int().min(1).max(LEVEL_COUNT).optional(),
   duelId: z.string().regex(DUEL_ID_PATTERN).optional(),
   arenaRunId: z.string().regex(/^[A-Za-z0-9]{20}$/).optional(),
+  /** Luật cao nhất client chơi được (JS cũ không gửi = v1) — server không cấp ván luật mới cho client cũ. */
+  rulesVersion: z.literal(2).optional().catch(undefined),
+})
+
+/** POST /api/ranked/match: body tuỳ chọn (client cũ không gửi body). */
+export const startRankedMatchRequestSchema = z.object({
+  rulesVersion: z.literal(2).optional().catch(undefined),
 })
 
 export const submitRankedGameRequestSchema = z.object({
