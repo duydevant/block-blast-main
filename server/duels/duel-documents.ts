@@ -15,6 +15,7 @@ import {
   type DuelState,
   duelRoundKey,
 } from "@/modules/duel/duel-types"
+import { CURRENT_RULES_VERSION } from "@/modules/block-puzzle/engine/game-types"
 import { getAdminDatabase } from "@/server/firebase/firebase-admin-app"
 import { USERS_COLLECTION } from "@/server/profile/stored-player-document"
 
@@ -51,6 +52,8 @@ export const storedDuelSchema = z
     series: scores.catch({}),
     ready: z.array(z.string()).catch([]),
     history: z.array(roundResultSchema).catch([]),
+    /** Phiên bản luật của ván hiện tại (thiếu = 1: ván mở trước luật v2). */
+    rulesVersion: z.literal(2).optional().catch(undefined),
   })
   // Phòng tạo trước khi có lastActiveAtMs: tính từ lúc tạo.
   .transform((duel) => ({ ...duel, lastActiveAtMs: duel.lastActiveAtMs ?? duel.createdAtMs }))
@@ -85,6 +88,7 @@ export function toDuelState(id: string, duel: StoredDuel, now: number): DuelStat
     ready: duel.ready,
     history: duel.history,
     started: Object.keys(duel.sessions),
+    ...(duel.rulesVersion === 2 ? { rulesVersion: duel.rulesVersion } : {}),
   }
 }
 
@@ -105,6 +109,7 @@ export function nextRoundPatch(duel: StoredDuel, now: number): Partial<StoredDue
     status: "playing",
     round: duel.round + 1,
     seed: randomInt(0, 0x1_0000_0000),
+    rulesVersion: CURRENT_RULES_VERSION,
     startAt,
     endsAt: startAt + DUEL_DURATION_MS,
     sessions: {},

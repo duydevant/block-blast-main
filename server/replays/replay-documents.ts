@@ -1,6 +1,7 @@
 import { type FieldValue, Timestamp } from "firebase-admin/firestore"
 import { z } from "zod"
 
+import type { RulesVersion } from "@/modules/block-puzzle/engine/game-types"
 import { encodeActions } from "@/modules/block-puzzle/engine/recorded-action-codec"
 import type { RecordedGameAction, ReplaySummary } from "@/modules/block-puzzle/engine/replay-recorded-game-actions"
 import { guestTagFromUid, type RankedGameMode } from "@/modules/player-profile/player-profile-types"
@@ -20,6 +21,7 @@ export function replayDocFor(input: {
   seed: number
   stashUnlocked: boolean
   levelId: number | null
+  rulesVersion?: RulesVersion
   actions: readonly RecordedGameAction[]
   summary: ReplaySummary
   displayName: string | null
@@ -40,6 +42,7 @@ export function replayDocFor(input: {
     seed: input.seed,
     stashUnlocked: input.stashUnlocked,
     levelId: input.levelId,
+    ...(input.rulesVersion === 2 ? { rulesVersion: input.rulesVersion } : {}),
     actions: encodeActions(input.actions),
     score: summary.score,
     moveCount: summary.moveCount,
@@ -61,6 +64,7 @@ const storedReplaySchema = z.object({
   seed: count,
   stashUnlocked: z.boolean(),
   levelId: z.number().int().positive().nullable().catch(null),
+  rulesVersion: z.literal(2).optional().catch(undefined),
   actions: z.array(count),
   score: count,
   moveCount: count,

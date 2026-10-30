@@ -39,6 +39,7 @@ function normalizeDuelState(raw: Partial<DuelState> | null | undefined): DuelSta
     ready: Object.values(raw.ready ?? []),
     history: Object.values(raw.history ?? []).map((item) => ({ ...item, scores: item.scores ?? {}, winnerUid: item.winnerUid ?? null })),
     started: Object.values(raw.started ?? []),
+    ...(raw.rulesVersion === 2 ? { rulesVersion: 2 } : {}),
   }
 }
 

@@ -5,6 +5,7 @@ import { randomInt } from "node:crypto"
 import { type Firestore, Timestamp } from "firebase-admin/firestore"
 import { z } from "zod"
 
+import { CURRENT_RULES_VERSION } from "@/modules/block-puzzle/engine/game-types"
 import { playBotGhost } from "@/modules/ranked/bot-ghost"
 import { mmrBucket } from "@/modules/ranked/rating-rules"
 import { PLAYER_TIER_IDS, type PlayerTierId } from "@/modules/progression/player-form-rules"
@@ -32,12 +33,15 @@ const ghostSchema = z.object({
   actions: z.array(count),
   times: z.array(count),
   isBot: z.boolean().catch(false),
+  /** Phiên bản luật của ván (thiếu = 1); chỉ ghép với trận cùng phiên bản (cùng seed phải ra cùng khay). */
+  rulesVersion: z.literal(2).optional().catch(undefined),
 })
 
 export type StoredGhost = z.infer<typeof ghostSchema> & { id: string }
 
 export function ghostDocFor(input: Omit<StoredGhost, "id" | "isBot">, nowMs: number) {
-  return { ...input, isBot: false, bucket: mmrBucket(input.mmr), rand: Math.random(), expireAt: Timestamp.fromMillis(nowMs + GHOST_TTL_MS) }
+  const { rulesVersion, ...rest } = input
+  return { ...rest, ...(rulesVersion === 2 ? { rulesVersion } : {}), isBot: false, bucket: mmrBucket(input.mmr), rand: Math.random(), expireAt: Timestamp.fromMillis(nowMs + GHOST_TTL_MS) }
 }
 
 /**
@@ -59,10 +63,12 @@ export async function pickGhost(db: Firestore, input: { uid: string; mmr: number
       for (const doc of [...above.docs, ...below.docs]) {
         const parsed = ghostSchema.safeParse(doc.data())
         if (!parsed.success || parsed.data.uid === input.uid || (parsed.data.uid && input.recentOpponents.includes(parsed.data.uid))) continue
+        // Bóng ma luật cũ (hết dần theo TTL 30 ngày) không ghép với trận luật hiện tại.
+        if ((parsed.data.rulesVersion ?? 1) !== CURRENT_RULES_VERSION) continue
         return { ...parsed.data, id: doc.id }
       }
     }
   }
-  const bot = playBotGhost(randomInt(0, 0x1_0000_0000), input.mmr)
-  return { id: "bot", uid: null, displayName: null, tier: null, mmr: input.mmr, isBot: true, ...bot }
+  const bot = playBotGhost(randomInt(0, 0x1_0000_0000), input.mmr, CURRENT_RULES_VERSION)
+  return { id: "bot", uid: null, displayName: null, tier: null, mmr: input.mmr, isBot: true, rulesVersion: CURRENT_RULES_VERSION, ...bot }
 }

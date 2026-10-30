@@ -6,7 +6,7 @@ import { dealOpeningTray } from "./opening-tray-generator"
 import { accumulateRunStats, EMPTY_RUN_STATS } from "./game-run-stats"
 import { dealTrayForState } from "./deal-tray-for-state"
 import { isStashUnlocked, POWER_UP_RULES, replaceTray, revive, stashPiece } from "./power-up-rules"
-import { nextComboState, scoreForMove } from "./score-and-combo-rules"
+import { nextComboState, nextPerfectChain, scoreForMove } from "./score-and-combo-rules"
 import { normalizeSeed } from "./seeded-random-generator"
 
 export { hasAnyMove, STASH_SLOT }
@@ -32,7 +32,7 @@ export function createNewGame(seed: number, variant: GameVariant = {}): GameStat
   const guaranteedTray = variant.guaranteedTray === true
   const deal = opening
     ? dealOpeningTray(normalizeSeed(seed), 1)
-    : dealTrayForState({ rngState: normalizeSeed(seed), nextPieceUid: 1, generatorState: undefined, guaranteedTray, fixedTrays }, board, 0)
+    : dealTrayForState({ rngState: normalizeSeed(seed), nextPieceUid: 1, generatorState: undefined, guaranteedTray, fixedTrays, rulesVersion: variant.rulesVersion }, board, 0)
   return {
     board,
     tray: deal.tray,
@@ -54,6 +54,7 @@ export function createNewGame(seed: number, variant: GameVariant = {}): GameStat
     ...(variant.moveLimit !== undefined ? { moveLimit: variant.moveLimit } : {}),
     linesCleared: 0,
     runStats: EMPTY_RUN_STATS,
+    ...(variant.rulesVersion === 2 ? { rulesVersion: 2, perfectChain: 0 } : {}),
     lastMove: null,
   }
 }
@@ -70,7 +71,9 @@ function applyPlacement(state: GameState, slot: number, row: number, col: number
   const linesCleared = lines.rows.length + lines.cols.length
   const boardCleared = linesCleared > 0 && isBoardEmpty(cleared.board)
   const comboState = nextComboState(state, linesCleared)
-  const points = scoreForMove({ placedCellCount: placed.placedCells.length, linesCleared, combo: comboState.combo, boardCleared })
+  // Luật v2: dọn sạch bàn liên tiếp nhân thưởng; luật v1 giữ thưởng cố định.
+  const chain = state.rulesVersion === 2 ? nextPerfectChain(state, boardCleared) : null
+  const points = scoreForMove({ placedCellCount: placed.placedCells.length, linesCleared, combo: comboState.combo, boardCleared, perfectChain: chain?.perfectChain })
   const score = state.score + points
 
   let tray: TraySlots = state.tray.map((item, index) => (index === slot ? null : item))
@@ -91,6 +94,7 @@ function applyPlacement(state: GameState, slot: number, row: number, col: number
     points,
     combo: comboState.combo,
     boardCleared,
+    ...(chain && boardCleared ? { perfectChain: chain.perfectChain } : {}),
   }
 
   const next: GameState = {
@@ -100,6 +104,7 @@ function applyPlacement(state: GameState, slot: number, row: number, col: number
     score,
     combo: comboState.combo,
     movesSinceClear: comboState.movesSinceClear,
+    ...(chain ? chain : {}),
     moveCount: state.moveCount + 1,
     linesCleared: (state.linesCleared ?? 0) + linesCleared,
     isGameOver: computeGameOver({ moveLimit: state.moveLimit, moveCount: state.moveCount + 1 }, cleared.board, tray, stash),

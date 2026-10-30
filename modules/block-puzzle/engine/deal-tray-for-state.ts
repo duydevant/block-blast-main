@@ -1,3 +1,4 @@
+import { dealAdaptiveTray } from "./adaptive-tray-dealer"
 import { BLOCK_COLOR_COUNT, TRAY_SIZE, type BoardCells, type GameState, type TrayPiece, type TraySlots } from "./game-types"
 import { dealGuaranteedTray } from "./guaranteed-tray-dealer"
 import { dealTray, type DealResult, INITIAL_GENERATOR_STATE } from "./piece-tray-generator"
@@ -25,15 +26,17 @@ function dealFixedTray(
 
 /**
  * Chia khay mới cho một ván: gom tham số bộ chia từ state và chọn bộ chia theo biến thể
- * (bài học → khay cố định trước; "Không bế tắc" → khay luôn có cách đặt hết). Mọi chỗ chia khay trong engine đi qua đây.
+ * (bài học → khay cố định trước; "Không bế tắc" → khay luôn có cách đặt hết; luật v2 → bộ chia theo điểm).
+ * Mọi chỗ chia khay trong engine đi qua đây.
  */
 export function dealTrayForState(
-  state: Pick<GameState, "rngState" | "nextPieceUid" | "generatorState" | "guaranteedTray" | "fixedTrays">,
+  state: Pick<GameState, "rngState" | "nextPieceUid" | "generatorState" | "guaranteedTray" | "fixedTrays" | "rulesVersion">,
   board: BoardCells,
   score: number,
   stash: TrayPiece | null = null
 ): StateDealResult {
   if (state.fixedTrays && state.fixedTrays.length > 0) return dealFixedTray(state, state.fixedTrays)
+  if (state.rulesVersion === 2 && !state.guaranteedTray) return dealAdaptiveTray(board, score, state.rngState, state.nextPieceUid, stash)
   const deal = state.guaranteedTray ? dealGuaranteedTray : dealTray
   return deal(board, score, state.rngState, state.nextPieceUid, state.generatorState, stash)
 }

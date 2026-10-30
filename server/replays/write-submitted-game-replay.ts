@@ -2,6 +2,7 @@ import "server-only"
 
 import type { FieldValue, Firestore, Transaction } from "firebase-admin/firestore"
 
+import type { RulesVersion } from "@/modules/block-puzzle/engine/game-types"
 import type { RecordedGameAction, ReplaySummary } from "@/modules/block-puzzle/engine/replay-recorded-game-actions"
 import type { RankedGameMode } from "@/modules/player-profile/player-profile-types"
 import type { PlayerTier } from "@/modules/progression/player-form-rules"
@@ -22,7 +23,7 @@ export function writeSubmittedGameReplay(
     gameId: string
     uid: string
     stored: StoredPlayer
-    session: { mode: RankedGameMode; seed: number; stashUnlocked: boolean; levelId: number | null }
+    session: { mode: RankedGameMode; seed: number; stashUnlocked: boolean; levelId: number | null; rulesVersion?: RulesVersion }
     actions: readonly RecordedGameAction[]
     summary: ReplaySummary
     tier: PlayerTier

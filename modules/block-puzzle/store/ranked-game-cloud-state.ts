@@ -6,7 +6,7 @@ import { ARENA_TYPES } from "@/modules/game-modes/arena-catalog"
 import { LEVEL_COUNT } from "@/modules/game-modes/level-catalog"
 import type { VariantRun } from "@/modules/game-modes/variant-run"
 
-import type { GameState } from "../engine/game-types"
+import type { GameState, RulesVersion } from "../engine/game-types"
 import { POWER_UP_RULES } from "../engine/power-up-rules"
 import type { RecordedGameAction } from "../engine/replay-recorded-game-actions"
 
@@ -24,6 +24,8 @@ export interface IssuedRankedSeed {
   uid: string
   seed: number
   stashUnlocked: boolean
+  /** Phiên bản luật server ghi trong session (thiếu = 1). */
+  rulesVersion?: RulesVersion
 }
 
 export interface PendingSubmission {
@@ -71,6 +73,7 @@ export interface IssuedChallengeStart {
   seed: number
   stashUnlocked: boolean
   opponent: ChallengeOpponent
+  rulesVersion?: RulesVersion
 }
 
 /** Seed daily server trả về: gameId null = lượt luyện tập (đã chơi lượt tính điểm hôm nay). */
@@ -79,6 +82,7 @@ export interface IssuedDailyStart {
   uid: string
   seed: number
   day: string
+  rulesVersion?: RulesVersion
 }
 
 /**
@@ -95,11 +99,19 @@ export function isUntouchedGame(game: GameState | null, initialReplaceCharges: n
 // Save nằm trong localStorage (người dùng sửa được) → chỉ validate kiểu; server mới là nơi kiểm tra thật.
 const actionSchema = z.object({ type: z.enum(["PLACE_PIECE", "STASH_PIECE", "REPLACE_TRAY", "REVIVE"]) }).passthrough()
 const idSchema = z.string().min(1).max(128)
+// Mất phiên bản luật thì ván chơi tiếp theo luật khác session → replay lệch; giá trị lạ coi như v1.
+const rulesVersionSchema = z.literal(2).optional().catch(undefined)
 const rankedStateSchema = z.object({
   rankedSession: z.object({ gameId: idSchema, uid: idSchema, queued: z.boolean() }).nullable().catch(null),
   actionLog: z.array(actionSchema).catch([]),
   nextRankedSeed: z
-    .object({ gameId: idSchema, uid: idSchema, seed: z.number().int().nonnegative(), stashUnlocked: z.boolean() })
+    .object({
+      gameId: idSchema,
+      uid: idSchema,
+      seed: z.number().int().nonnegative(),
+      stashUnlocked: z.boolean(),
+      rulesVersion: rulesVersionSchema,
+    })
     .nullable()
     .catch(null),
   pendingSubmissions: z
@@ -132,6 +144,7 @@ const rankedStateSchema = z.object({
         }),
         endsAt: z.number(),
         clockOffset: z.number().catch(0),
+        rulesVersion: rulesVersionSchema,
       }),
       z.object({
         kind: z.literal("arena"),
@@ -153,6 +166,7 @@ const rankedStateSchema = z.object({
         endsAt: z.number(),
         // Lệch giờ máy so với server lúc vào ván (save cũ không có → 0).
         clockOffset: z.number().catch(0),
+        rulesVersion: rulesVersionSchema,
       }),
     ])
     .nullable()

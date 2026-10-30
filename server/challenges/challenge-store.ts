@@ -33,6 +33,7 @@ const sessionSchema = z.object({
   suspect: z.boolean().catch(false),
   /** Thách đấu đã tạo từ ván này (khác `challengeId` = thách đấu mà ván nhận thách đấu đang chơi). */
   createdChallengeId: z.string().optional(),
+  rulesVersion: z.literal(2).optional().catch(undefined),
 })
 
 /**
@@ -70,6 +71,7 @@ export async function createChallengeFromSession(uid: string, gameId: string, ac
       seed: session.data.seed,
       stashUnlocked: session.data.stashUnlocked,
       sourceGameId: gameId,
+      ...(session.data.rulesVersion === 2 ? { rulesVersion: 2 } : {}),
       attempts: 0,
       // Ván người thách quá ngắn / nghi bot → thách đấu vẫn chơi được nhưng không có thưởng 2 chiều.
       expiresAtMs: !session.data.suspect && session.data.moveCount >= CHALLENGE_MIN_MOVES ? Date.now() + CHALLENGE_REWARD_WINDOW_MS : null,

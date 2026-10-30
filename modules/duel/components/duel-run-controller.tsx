@@ -25,7 +25,7 @@ export function DuelRunController({ run }: { run: DuelRun }) {
   useDuelOnline(run.duelId)
   const room = useDuelRoom(run.duelId)
   const now = useServerNow(room.offsetKnown ? room.serverOffset : run.clockOffset, 500)
-  const opponent = useDuelBoard(run.duelId, duelRoundKey(run.round), run.seed, run.opponent.uid)
+  const opponent = useDuelBoard(run.duelId, duelRoundKey(run.round), run.seed, run.opponent.uid, run.rulesVersion)
   const score = useBlockPuzzleGameStore((state) => state.game?.score ?? 0)
   const over = useBlockPuzzleGameStore((state) => state.game?.isGameOver ?? false)
   const endVariantRun = useBlockPuzzleGameStore((state) => state.endVariantRun)

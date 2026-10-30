@@ -3,6 +3,7 @@ import { ApiRequestError, fetchJsonWithFirebaseIdToken } from "@/lib/firebase/fe
 import { ApiRoutes } from "@/lib/routes"
 import type { StartRankedGameResponse, SubmitRankedGameResponse } from "@/modules/player-profile/player-profile-types"
 
+import { CURRENT_RULES_VERSION } from "../engine/game-types"
 import { actionTimesOf, withoutActionTime } from "../engine/recorded-action-timing"
 
 import { useBlockPuzzleGameStore } from "./block-puzzle-game-store"
@@ -55,14 +56,14 @@ export function startRankedGameCloudSync(onGameSubmitted: (result: SubmitRankedG
       const stashUnlocked = store.getState().game?.stashUnlocked ?? false
       const issued = await fetchJsonWithFirebaseIdToken<StartRankedGameResponse>(ApiRoutes.GAMES_START, {
         method: "POST",
-        body: { mode: "classic", stashUnlocked },
+        body: { mode: "classic", stashUnlocked, rulesVersion: CURRENT_RULES_VERSION },
         expectedUid: uid,
       })
       if (!issued.gameId) throw new Error("classic start returned no session")
       const gameId = issued.gameId
       if (refetchingForStash) keptLockedSeedId = gameId
       if (!disposed && currentUid() === uid) {
-        store.getState().setNextRankedSeed({ gameId, uid, seed: issued.seed, stashUnlocked: issued.stashUnlocked })
+        store.getState().setNextRankedSeed({ gameId, uid, seed: issued.seed, stashUnlocked: issued.stashUnlocked, rulesVersion: issued.rulesVersion })
       }
     } catch (error) {
       console.warn("[ranked-sync] could not get a ranked seed", error)

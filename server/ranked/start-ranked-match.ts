@@ -2,6 +2,7 @@ import "server-only"
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
 
+import { CURRENT_RULES_VERSION, type RulesVersion } from "@/modules/block-puzzle/engine/game-types"
 import type { StartRankedGameResponse } from "@/modules/player-profile/player-profile-types"
 import { RANKED_TIME_MS } from "@/modules/ranked/bot-ghost"
 import { applyMatch, rankedSeasonKeyFor, ratingForSeason } from "@/modules/ranked/rating-rules"
@@ -18,7 +19,9 @@ const RANKED_FORFEIT_AFTER_MS = RANKED_TIME_MS + 2 * 60 * 1000
  * Mở trận xếp hạng: chọn bóng ma theo MMR, tạo session `mode: "ranked"` cùng seed với bóng ma (biến thể đấu 1v1).
  * Trận trước còn mở (thoát không nộp): đang trong giờ → 409 `match-pending`; quá giờ → tính thua (không né thua được).
  */
-export async function startRankedMatch(uid: string): Promise<StartRankedGameResponse> {
+export async function startRankedMatch(uid: string, clientRulesVersion?: RulesVersion): Promise<StartRankedGameResponse> {
+  // Hồ bóng ma + bot chỉ có luật hiện tại; JS cũ sẽ dựng bàn luật cũ → chấm sai, tính thua oan. Bắt tải lại trước.
+  if (clientRulesVersion !== CURRENT_RULES_VERSION) throw new HttpError(409, "client-outdated")
   const db = getAdminFirestore()
   const userRef = db.collection(USERS_COLLECTION).doc(uid)
   const now = new Date()
@@ -55,6 +58,7 @@ export async function startRankedMatch(uid: string): Promise<StartRankedGameResp
       ghostMmr: ghost.mmr,
       ghostUid: ghost.uid,
       ghostIsBot: ghost.isBot,
+      ...(ghost.rulesVersion === 2 ? { rulesVersion: ghost.rulesVersion } : {}),
       createdAt: FieldValue.serverTimestamp(),
       expireAt: Timestamp.fromMillis(nowMs + 30 * 24 * 60 * 60 * 1000),
     })
@@ -75,5 +79,6 @@ export async function startRankedMatch(uid: string): Promise<StartRankedGameResp
       endsAt: nowMs + RANKED_TIME_MS,
       serverNow: nowMs,
     },
+    rulesVersion: ghost.rulesVersion,
   }
 }

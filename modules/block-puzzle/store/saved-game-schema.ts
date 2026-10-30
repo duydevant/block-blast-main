@@ -3,6 +3,7 @@ import { z } from "zod"
 import { BLOCK_COLOR_COUNT, BOARD_CELL_COUNT, TRAY_SIZE, type GameState } from "../engine/game-types"
 import { findShape } from "../engine/piece-shape-catalog"
 import { POWER_UP_RULES } from "../engine/power-up-rules"
+import { PERFECT_CLEAR_CHAIN_RULES } from "../engine/score-and-combo-rules"
 import { INITIAL_GENERATOR_STATE } from "../engine/piece-tray-generator"
 
 const nonNegativeInt = z.number().int().nonnegative()
@@ -52,6 +53,10 @@ const gameStateSchema = z.object({
     .optional(),
   linesCleared: nonNegativeInt.optional(),
   runStats: runStatsSchema.optional().catch(undefined),
+  // Luật v2 (chuỗi dọn sạch bàn + bộ chia theo điểm). Mất field này thì ván chơi tiếp theo luật khác → replay lệch.
+  rulesVersion: z.literal(2).optional(),
+  perfectChain: nonNegativeInt.max(10_000).optional(),
+  movesSinceBoardClear: nonNegativeInt.max(PERFECT_CLEAR_CHAIN_RULES.chainWindowMoves + 1).optional(),
   generatorState: z.union([
     z.object({
       stepsBeforeSmart: z.number().int().min(-1).max(4),

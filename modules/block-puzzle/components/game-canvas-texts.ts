@@ -18,7 +18,9 @@ export function moveEffectTexts(game: GameState, i18n: I18n): MoveEffectTexts {
   return {
     points: i18n.t("game.points", { points: i18n.formatNumber(move.points) }),
     combo: move.combo >= 2 ? i18n.t("game.combo", { count: move.combo }) : null,
-    boardClear: move.boardCleared ? i18n.t("game.boardClear") : null,
+    // Luật v2: dọn sạch liên tiếp → "Dọn sạch ×n" (lần đầu vẫn là chữ cũ).
+    boardClear: !move.boardCleared ? null
+      : (move.perfectChain ?? 1) >= 2 ? i18n.t("game.boardClearChain", { count: move.perfectChain ?? 1 }) : i18n.t("game.boardClear"),
   }
 }
 

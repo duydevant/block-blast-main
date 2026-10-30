@@ -15,7 +15,7 @@ import type { DuelRun } from "./duel-hud"
 /** Dưới bảng điểm khi đang đấu: bàn mini trực tiếp của đối thủ + trạng thái (đang chơi / hết nước / mất kết nối) + emote. */
 export function DuelOpponentStrip({ run }: { run: DuelRun }) {
   const { t } = useI18n()
-  const board = useDuelBoard(run.duelId, duelRoundKey(run.round), run.seed, run.opponent.uid)
+  const board = useDuelBoard(run.duelId, duelRoundKey(run.round), run.seed, run.opponent.uid, run.rulesVersion)
   const online = useDuelOnline(run.duelId, false)
   const myUid = useSignedInUid()
   const emotes = useDuelEmotes(run.duelId)

@@ -8,6 +8,13 @@ export const STASH_SLOT = -2
 /** Số màu khối; colorId chạy từ 1..BLOCK_COLOR_COUNT, 0 = ô trống. */
 export const BLOCK_COLOR_COUNT = 8
 
+/**
+ * Phiên bản luật ván: 1 = luật cũ (thưởng dọn bàn cố định, bộ chia cổ điển); 2 = chuỗi dọn sạch bàn + bộ chia theo điểm
+ * (chỉ chế độ vô tận). Ván/session/bóng ma không ghi phiên bản = 1, để replay ván cũ ra đúng điểm cũ.
+ */
+export type RulesVersion = 1 | 2
+export const CURRENT_RULES_VERSION = 2 satisfies RulesVersion
+
 /** Bàn chơi phẳng, index = row * BOARD_SIZE + col. */
 export type BoardCells = readonly number[]
 
@@ -54,6 +61,8 @@ export interface MoveResult {
   points: number
   combo: number
   boardCleared: boolean
+  /** Luật v2: chuỗi dọn sạch bàn sau nước này (để hiện "Dọn sạch ×n"). */
+  perfectChain?: number
 }
 
 export interface GameState {
@@ -87,6 +96,12 @@ export interface GameState {
   linesCleared?: number
   /** Chỉ số kỹ năng của ván (reducer cộng dồn); save cũ thiếu → coi như rỗng. */
   runStats?: GameRunStats
+  /** Thiếu = luật v1. */
+  rulesVersion?: RulesVersion
+  /** Luật v2: chuỗi dọn sạch bàn hiện tại (0 = chưa có / đã đứt). */
+  perfectChain?: number
+  /** Luật v2: số nước đã đặt kể từ lần dọn sạch bàn gần nhất (thiếu = chưa dọn lần nào). */
+  movesSinceBoardClear?: number
   lastMove: MoveResult | null
 }
 
@@ -107,6 +122,8 @@ export interface GameVariant {
   guaranteedTray?: boolean
   /** Bài học: chia lần lượt các khay này (1–3 khối mỗi khay, theo shapeId) trước khi chia như thường. */
   fixedTrays?: readonly (readonly string[])[]
+  /** Phiên bản luật (thiếu = 1); server ghi vào session, client lấy từ seed được cấp. */
+  rulesVersion?: RulesVersion
 }
 
 export type GameAction =

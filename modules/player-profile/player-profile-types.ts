@@ -1,5 +1,6 @@
 /** Kiểu dữ liệu profile dùng chung giữa API route (server) và UI (client). */
 
+import type { RulesVersion } from "@/modules/block-puzzle/engine/game-types"
 import type { ChallengeRewardResult } from "@/modules/challenge/challenge-reward-rules"
 import type { ChallengeOpponent } from "@/modules/challenge/challenge-types"
 import type { DuelStartInfo } from "@/modules/duel/duel-types"
@@ -149,6 +150,8 @@ export interface StartRankedGameResponse {
   arena?: ArenaStartInfo | null
   /** Chỉ có ở ranked (trận với bóng ma). */
   ranked?: RankedMatchInfo | null
+  /** Phiên bản luật của ván (thiếu = 1); client tạo ván đúng phiên bản này để server replay khớp. */
+  rulesVersion?: RulesVersion
 }
 
 /** Phần thưởng một ván đã replay mang lại (để client báo cho người chơi). */

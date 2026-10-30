@@ -54,6 +54,7 @@ export function writeRankedResult(
           tier: input.tier === "unranked" ? null : input.tier,
           mmr: outcome.rating.mmr,
           seed: session.seed,
+          rulesVersion: session.rulesVersion === 2 ? 2 : undefined,
           score: input.score,
           actions: encodeActions(input.actions),
           times: relativeGhostTimes(input.times, input.actions.length),

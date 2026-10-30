@@ -1,6 +1,7 @@
 import type { GameRunStats } from "@/modules/block-puzzle/engine/game-run-stats"
+import type { RulesVersion } from "@/modules/block-puzzle/engine/game-types"
 import type { RankedGameStart } from "@/modules/block-puzzle/engine/replay-recorded-game-actions"
-import { variantForRun } from "@/modules/game-modes/variant-run"
+import { variantForRun, withRulesVersion } from "@/modules/game-modes/variant-run"
 import type { RankedGameMode } from "@/modules/player-profile/player-profile-types"
 import type { PlayerTierId } from "@/modules/progression/player-form-rules"
 
@@ -11,6 +12,8 @@ export interface GameReplayResponse {
   seed: number
   stashUnlocked: boolean
   levelId: number | null
+  /** Phiên bản luật (thiếu = 1). */
+  rulesVersion?: RulesVersion
   /** Nước đi đã nén (recorded-action-codec). */
   actions: number[]
   score: number
@@ -35,7 +38,7 @@ export interface SaveReplayResponse {
 export const MAX_SAVED_REPLAYS = 20
 
 /** Điều kiện đầu ván để phát lại — biến thể suy từ chế độ + màn như server, không lưu trong replay. */
-export function replayStartFor(replay: Pick<GameReplayResponse, "mode" | "seed" | "stashUnlocked" | "levelId">): RankedGameStart {
+export function replayStartFor(replay: Pick<GameReplayResponse, "mode" | "seed" | "stashUnlocked" | "levelId" | "rulesVersion">): RankedGameStart {
   const variant =
     replay.mode === "level" && replay.levelId !== null
       ? variantForRun({ kind: "level", levelId: replay.levelId })
@@ -45,5 +48,5 @@ export function replayStartFor(replay: Pick<GameReplayResponse, "mode" | "seed" 
           replay.mode === "ranked"
           ? variantForRun({ kind: "duel" })
         : undefined
-  return { seed: replay.seed, stashUnlocked: replay.stashUnlocked, variant }
+  return { seed: replay.seed, stashUnlocked: replay.stashUnlocked, variant: withRulesVersion(variant, replay.rulesVersion) }
 }

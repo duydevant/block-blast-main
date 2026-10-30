@@ -3,7 +3,7 @@ import { z } from "zod"
 
 import type { GameVariant } from "@/modules/block-puzzle/engine/game-types"
 import { findArenaLevel } from "@/modules/game-modes/arena-catalog"
-import { variantForRun } from "@/modules/game-modes/variant-run"
+import { variantForRun, withRulesVersion } from "@/modules/game-modes/variant-run"
 import { RANKED_VARIANT } from "@/modules/ranked/bot-ghost"
 
 /** Doc gameSessions/{gameId} do server tạo lúc cấp seed. */
@@ -30,6 +30,8 @@ export const storedSessionSchema = z.object({
   ghostMmr: z.number().int().nonnegative().catch(1000),
   ghostUid: z.string().nullable().catch(null),
   ghostIsBot: z.boolean().catch(false),
+  /** Phiên bản luật (thiếu = 1: session tạo trước luật v2, hoặc chế độ giữ luật cũ). */
+  rulesVersion: z.literal(2).optional().catch(undefined),
   /** Lúc cấp seed (giờ server) — để đánh giá nhịp chơi khi nộp. */
   createdAt: z.instanceof(Timestamp).optional().catch(undefined),
 })
@@ -39,9 +41,10 @@ export type StoredGameSession = z.infer<typeof storedSessionSchema>
 /** Biến thể ván để replay — luôn từ catalog theo session, không bao giờ từ client. */
 export function variantForSession(session: StoredGameSession): GameVariant | undefined {
   if (session.mode === "level" && session.levelId !== null) return variantForRun({ kind: "level", levelId: session.levelId })
-  if (session.mode === "duel") return variantForRun({ kind: "duel" })
+  if (session.mode === "duel") return variantForRun({ kind: "duel", rulesVersion: session.rulesVersion })
   if (session.mode === "logic") return variantForRun({ kind: "logic" })
-  if (session.mode === "ranked") return RANKED_VARIANT
+  if (session.mode === "ranked") return withRulesVersion(RANKED_VARIANT, session.rulesVersion)
   if (session.mode === "arena") return findArenaLevel(session.arenaType ?? "", session.arenaLevel ?? 0)?.variant
-  return undefined
+  // Cổ điển / thử thách ngày / thách đấu: ván thường, chỉ khác phiên bản luật.
+  return withRulesVersion(undefined, session.rulesVersion)
 }

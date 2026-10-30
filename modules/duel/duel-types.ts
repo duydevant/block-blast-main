@@ -1,5 +1,7 @@
 /** Kiểu + hằng số đấu 1v1 dùng chung client (phòng, HUD, người xem) và server (API, chấm ván). */
 
+import type { RulesVersion } from "@/modules/block-puzzle/engine/game-types"
+
 /**
  * Mã phòng = id phòng: 6 ký tự in hoa không dễ nhầm (bảng chữ của mã mời) — vừa gõ tay được vừa nằm trong link.
  * Vẫn nhận id 10 ký tự của các phòng tạo trước khi đổi sang mã.
@@ -77,6 +79,8 @@ export interface DuelState {
   history: DuelRoundResult[]
   /** uid đã vào ván hiện tại (mỗi người một ván mỗi lượt). */
   started: string[]
+  /** Phiên bản luật của ván hiện tại (thiếu = 1) — người xem dựng bàn đúng luật. */
+  rulesVersion?: RulesVersion
 }
 
 /** Phản hồi API trận (khác bản RTDB): kèm giờ server để client tính lệch đồng hồ khi chưa có RTDB. */

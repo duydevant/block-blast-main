@@ -37,7 +37,7 @@ function DuelSide({ name, score, note, align, scoreClass }: { name: string; scor
 export function DuelHud({ run }: { run: DuelRun }) {
   const { t, formatNumber } = useI18n()
   const room = useDuelRoom(run.duelId)
-  const opponent = useDuelBoard(run.duelId, duelRoundKey(run.round), run.seed, run.opponent.uid)
+  const opponent = useDuelBoard(run.duelId, duelRoundKey(run.round), run.seed, run.opponent.uid, run.rulesVersion)
   // Lệch giờ: RTDB nếu đã có, không thì lệch tính lúc server cấp ván (không bao giờ tin đồng hồ máy trần).
   const now = useServerNow(room.offsetKnown ? room.serverOffset : run.clockOffset)
   const score = useBlockPuzzleGameStore((state) => state.game?.score ?? 0)

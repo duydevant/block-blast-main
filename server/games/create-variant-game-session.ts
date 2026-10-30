@@ -44,7 +44,8 @@ export async function createDuelSession(
   uid: string,
   sessionRef: DocumentReference,
   fields: SessionFields,
-  duelId: string | undefined
+  duelId: string | undefined,
+  clientSupportsCurrent: boolean
 ): Promise<StartRankedGameResponse> {
   if (!duelId) throw new HttpError(400, "missing-duel-id")
   const db = getAdminFirestore()
@@ -57,9 +58,11 @@ export async function createDuelSession(
     if (duel.status !== "playing" || duel.startAt === null || duel.endsAt === null || now < duel.startAt - DUEL_EARLY_START_TOLERANCE_MS || now >= duel.endsAt) {
       throw new HttpError(409, "duel-not-playing")
     }
+    // Ván của phòng theo luật v2 mà client còn JS cũ (tạo bàn luật v1) → nước đi sẽ chấm sai: bắt tải lại trước.
+    if (duel.rulesVersion === 2 && !clientSupportsCurrent) throw new HttpError(409, "client-outdated")
     const existing = duel.sessions[uid]
     const updated = existing ? duel : writeDuel(tx, ref, duel, { sessions: { ...duel.sessions, [uid]: sessionRef.id } }, now)
-    if (!existing) tx.set(sessionRef, fields(duel.seed, { duelId }))
+    if (!existing) tx.set(sessionRef, fields(duel.seed, { duelId, ...(duel.rulesVersion === 2 ? { rulesVersion: 2 } : {}) }))
     const opponent = uid === duel.hostUid ? { uid: duel.guestUid ?? "", name: duel.guestName } : { uid: duel.hostUid, name: duel.hostName }
     const response: StartRankedGameResponse = {
       gameId: existing ?? sessionRef.id,
@@ -69,6 +72,7 @@ export async function createDuelSession(
       day: null,
       challenge: null,
       duel: { id: duelId, round: duel.round, opponent, startAt: duel.startAt, endsAt: duel.endsAt, serverNow: now },
+      rulesVersion: duel.rulesVersion,
     }
     return { response, state: toDuelState(duelId, updated, now), existing: Boolean(existing), round: duel.round }
   })
