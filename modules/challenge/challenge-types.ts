@@ -17,6 +17,8 @@ export interface ChallengeView {
   creatorTag: string
   creatorScore: number
   attempts: number
+  /** Hạn thưởng 2 chiều (epoch ms) khi còn hạn: vượt điểm trước hạn → cả hai nhận xu. null = hết hạn / thách đấu cũ. */
+  rewardExpiresAt: number | null
   results: ChallengeResultRow[]
 }
 

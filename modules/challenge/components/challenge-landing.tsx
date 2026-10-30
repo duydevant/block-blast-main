@@ -8,11 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useI18n } from "@/lib/i18n"
 import { Routes } from "@/lib/routes"
 
+import { CHALLENGE_REWARD_COINS } from "../challenge-reward-rules"
 import type { ChallengeView } from "../challenge-types"
 
 /** Nội dung trang /c/{id}: người thách, điểm cần vượt, nút nhận thách đấu, bảng kết quả. */
 export function ChallengeLanding({ view }: { view: ChallengeView }) {
-  const { t, formatNumber } = useI18n()
+  const { t, formatNumber, localeTag } = useI18n()
   const nameOf = (displayName: string | null, tag: string) => displayName ?? t("profile.guestName", { tag })
   const challenger = nameOf(view.creatorName, view.creatorTag)
 
@@ -29,6 +30,11 @@ export function ChallengeLanding({ view }: { view: ChallengeView }) {
           <Button size="lg" className="h-11 px-6 text-base" nativeButton={false} render={<Link href={`${Routes.PLAY}?challenge=${view.id}`} />}>
             {t("challenge.accept")}
           </Button>
+          {view.rewardExpiresAt !== null && (
+            <p className="text-sm font-semibold text-primary">
+              {t("challenge.rewardOffer", { date: new Date(view.rewardExpiresAt).toLocaleString(localeTag, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }), coins: CHALLENGE_REWARD_COINS })}
+            </p>
+          )}
           {view.attempts > 0 && <p className="text-sm text-muted-foreground">{t("challenge.attempts", { count: formatNumber(view.attempts) })}</p>}
         </CardContent>
       </Card>

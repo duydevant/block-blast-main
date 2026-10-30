@@ -29,7 +29,7 @@ export type ParkedGames = Partial<Record<GameModeSlot, ParkedGame>>
 /** Chế độ của ván (null = đấu 1v1, không cất). */
 export function modeSlotOf(state: Pick<ParkedGame, "dailyDay" | "challenge" | "variantRun">): GameModeSlot | null {
   // Đấu 1v1 / Đấu trường có giờ hoặc lần thử đã trả xu → không cất (rời ván = nộp phần đã chơi).
-  if (state.variantRun?.kind === "duel" || state.variantRun?.kind === "arena") return null
+  if (state.variantRun?.kind === "duel" || state.variantRun?.kind === "arena" || state.variantRun?.kind === "ranked") return null
   if (state.variantRun) return state.variantRun.kind
   if (state.dailyDay) return "daily"
   if (state.challenge) return "challenge"

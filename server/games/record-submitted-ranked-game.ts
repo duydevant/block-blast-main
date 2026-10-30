@@ -5,10 +5,7 @@ import { FieldValue, type Firestore } from "firebase-admin/firestore"
 import { replayRecordedGame, type RecordedGameAction } from "@/modules/block-puzzle/engine/replay-recorded-game-actions"
 import { seasonKeyFor } from "@/lib/vn-calendar"
 import { NO_GAME_REWARDS, type SubmitRankedGameResponse } from "@/modules/player-profile/player-profile-types"
-import { totalLevelStars } from "@/modules/progression/achievement-catalog"
-import { missionBandForTier } from "@/modules/progression/daily-mission-catalog"
-import { formFromRecent, tierForForm } from "@/modules/progression/player-form-rules"
-import { seasonRef, writeSeasonProgress } from "@/server/seasons/season-documents"
+import { seasonRef } from "@/server/seasons/season-documents"
 import { findLevel, starsForLevel } from "@/modules/game-modes/level-catalog"
 import { withRecentBest } from "@/modules/progression/daily-challenge-goals"
 import { advanceDailyStreak } from "@/server/daily/advance-daily-streak"
@@ -26,15 +23,19 @@ import {
 } from "@/server/profile/stored-player-document"
 
 import { CHALLENGE_RESULTS_SUBCOLLECTION, CHALLENGES_COLLECTION } from "@/server/challenges/challenge-documents"
+import { planChallengeReward } from "@/server/challenges/challenge-reward-submission"
+import { PLACEMENT_GAMES, rankedSeasonKeyFor } from "@/modules/ranked/rating-rules"
+import { forfeitedRating, rankedOutcome } from "@/server/ranked/apply-ranked-result"
 
 import { arenaPoints } from "@/modules/game-modes/arena-catalog"
 import { failArenaAttempt, readArenaContext, summarizeArenaAttempt } from "@/server/arena/apply-arena-attempt"
 
-import { isCountedPureGame, statsForSubmission } from "./apply-verified-game-to-player-stats"
+import { statsForSubmission } from "./apply-verified-game-to-player-stats"
 import { assessGamePlausibility } from "./assess-game-plausibility"
 import { storedSessionSchema, variantForSession } from "./stored-game-session"
 import { prepareBoardsAndReplay, writeBoardsAndReplay } from "./submitted-game-boards-and-replay"
 import { verifiedGamePlayerUpdates } from "./verified-game-player-updates"
+import { writeModeResults } from "./write-mode-results"
 import { writeSubmittedSideDocuments } from "./write-submitted-side-documents"
 
 
@@ -98,8 +99,14 @@ export async function recordSubmittedRankedGame(
         tx.set(userRef, { arenaRunOpen: null }, { merge: true })
       }
     }
+    // Xếp hạng: log hỏng / 0 nước vẫn tính thua (không né thua bằng cách gửi log rỗng).
+    const forfeitRanked = () => {
+      const rating = mode === "ranked" ? forfeitedRating({ gameId, session: session.data, stored: parseStoredPlayer(userSnap.data()), season: rankedSeasonKeyFor(now) }) : null
+      if (rating) tx.set(userRef, { rating, rankedOpenGameId: null }, { merge: true })
+    }
     if (!replay.ok) {
       failArena()
+      forfeitRanked()
       tx.update(sessionRef, { status: "rejected", rejectReason: replay.reason, finishedAt })
       return { ok: false, error: new HttpError(422, "replay-rejected") }
     }
@@ -111,6 +118,7 @@ export async function recordSubmittedRankedGame(
     if (summary.moveCount === 0) {
       if (daily?.counts) releaseDailyRun(tx, daily, gameId)
       failArena()
+      forfeitRanked()
       tx.update(sessionRef, { status: "abandoned", finishedAt })
       return { ok: true, response: { score: 0, stats: stored.stats, improvedBoards: [], rewards: NO_GAME_REWARDS } }
     }
@@ -126,9 +134,16 @@ export async function recordSubmittedRankedGame(
     // Đấu trường: chấm lần thử (giờ server), lượt thắng → xu + XP + cấp cao nhất của loại.
     const durationMs = createdAtMs === null ? 0 : now.getTime() - createdAtMs
     const playSpanMs = times && times.length === actions.length && times.length > 1 ? times[times.length - 1] - times[0] : null
+    const ranked =
+      mode === "ranked"
+        ? rankedOutcome({ gameId, session: session.data, stored, score: summary.score, durationMs, playSpanMs, flagged, season: rankedSeasonKeyFor(now) })
+        : null
     const arenaResult = summarizeArenaAttempt({ context: arena, arenaLevels: stored.arena, gameId, summary, durationMs, playSpanMs, startedMs, flagged })
     const challengeRefs = mode === "challenge" && challengeId && !flagged ? challengeResultRefs(db, challengeId, uid) : null
     const [challengeResultSnap, challengeSnap] = challengeRefs ? await tx.getAll(challengeRefs.result, challengeRefs.challenge) : []
+    const challengeReward = challengeRefs
+      ? await planChallengeReward(tx, db, { uid, challengeSnap, userSnap, stored, score: summary.score, moveCount: summary.moveCount, flagged, nowMs: now.getTime(), today })
+      : null
     // Ô cất chỉ "mở vĩnh viễn" khi người chơi tự mở trong ván; ván thách đấu thừa hưởng ô cất của người thách.
     const stashEarned = summary.stashUnlocked && (mode !== "challenge" || !stashUnlocked)
 
@@ -189,31 +204,34 @@ export async function recordSubmittedRankedGame(
       tierAfter: updates.tierAfter,
       levelStarsAfter: progression.playerFields.levelStars,
       flagged,
+      rankedLp: ranked?.current && ranked.rating.placements >= PLACEMENT_GAMES ? ranked.rating.lp : null,
     }
     const boards = await prepareBoardsAndReplay(tx, db, boardsInput)
 
     // ── Ghi ──
     const replayFields = writeBoardsAndReplay(tx, db, boardsInput, boards, finishedAt)
-    if (arena && arenaResult.outcome && Object.keys(arenaResult.outcome.runPatch).length > 0) tx.update(arena.ref, arenaResult.outcome.runPatch)
-    // Mùa giải: ván bị gắn cờ không tính (số ván, Bậc cao nhất, nhiệm vụ mùa).
-    if (!flagged) {
-      writeSeasonProgress(tx, {
-        ref: seasonDocRef,
-        snap: seasonSnap,
-        season,
-        bandIfNew: missionBandForTier(tierForForm(formFromRecent(stored.recentFormScores))),
-        stamp: finishedAt,
-        game: {
-          linesCleared: summary.linesCleared,
-          firstDailyRun: mode === "daily" && countsForDaily && firstDailyRun,
-          tierAfter: updates.tierAfter,
-          levelStarsGained: totalLevelStars(progression.playerFields.levelStars) - totalLevelStars(stored.levelStars),
-          pureScore: isCountedPureGame(summary) ? summary.score : 0,
-          isDuel: mode === "duel",
-          arenaWon: arenaResult.won,
-        },
-      })
-    }
+    const challengeResult = writeModeResults(tx, db, {
+      uid,
+      gameId,
+      mode,
+      stored,
+      summary,
+      actions,
+      times: times ?? null,
+      flagged,
+      countsForDaily,
+      firstDailyRun,
+      tierAfter: updates.tierAfter,
+      levelStarsAfter: progression.playerFields.levelStars,
+      arena,
+      arenaResult,
+      season: { key: season, ref: seasonDocRef, snap: seasonSnap },
+      ranked: ranked ? { outcome: ranked, session: { ...session.data, seed } } : null,
+      challengeReward,
+      today,
+      stamp: finishedAt,
+      nowMs: now.getTime(),
+    })
     writeSubmittedSideDocuments(tx, {
       userRef,
       gameId,
@@ -234,6 +252,7 @@ export async function recordSubmittedRankedGame(
           ? { challengeRef: challengeRefs.challenge, resultRef: challengeRefs.result, previousScore: challengeResultSnap?.get("score"), displayName: stored.displayName }
           : null,
     })
+    const challengeCoins = challengeResult?.coins ?? 0
     if (daily && dailyOutcome) {
       writeDailyRunResult(tx, daily, dailyOutcome, { uid, displayName: stored.displayName, gameId, moveCount: summary.moveCount, stamp: finishedAt })
     }
@@ -251,11 +270,12 @@ export async function recordSubmittedRankedGame(
         ...progression.playerFields,
         ...replayFields,
         // Bị gắn cờ: không nhận xu của ván này (XP / thống kê vẫn cộng để người thật bị nhầm không mất tiến trình).
-        coins: flagged ? stored.coins : progression.playerFields.coins + dailyCoins + arenaResult.coins,
+        coins: flagged ? stored.coins : progression.playerFields.coins + dailyCoins + arenaResult.coins + challengeCoins,
         ...(arena
           ? { arena: arenaResult.levels, ...(arenaResult.outcome?.closed && stored.arenaRunOpen === arena.ref.id ? { arenaRunOpen: null } : {}) }
           : {}),
         ...(dailyOutcome ? { dailyBest: dailyOutcome.dailyBest } : {}),
+        ...(ranked?.current ? { rating: ranked.rating, rankedOpenGameId: null } : {}),
         updatedAt: finishedAt,
         ...(userSnap.exists ? {} : { displayName: null, createdAt: finishedAt }),
       },
@@ -276,7 +296,9 @@ export async function recordSubmittedRankedGame(
     })
     const rewards = {
       ...progression.rewards,
-      coins: flagged ? 0 : progression.rewards.coins + dailyCoins + arenaResult.coins,
+      coins: flagged ? 0 : progression.rewards.coins + dailyCoins + arenaResult.coins + challengeCoins,
+      challenge: challengeResult,
+      ranked: ranked?.reward ?? null,
       arena: arenaResult.outcome?.reward ?? null,
       daily: dailyOutcome?.reward ?? null,
       flagged,

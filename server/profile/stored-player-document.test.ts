@@ -47,6 +47,10 @@ describe("parseStoredPlayer", () => {
       coinsSpentTotal: 0,
       arena: {},
       arenaRunOpen: null,
+      challengeRewardDay: null,
+      challengeRewardCount: 0,
+      rating: null,
+      rankedOpenGameId: null,
     })
   })
 

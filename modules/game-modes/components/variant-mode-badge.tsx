@@ -7,6 +7,8 @@ import { useBlockPuzzleGameStore } from "@/modules/block-puzzle/store/block-puzz
 import { DuelOpponentStrip } from "@/modules/duel/components/duel-opponent-strip"
 
 import { findLevel, levelGoalProgress, type LevelDefinition } from "../level-catalog"
+import { RankedGhostStrip } from "@/modules/ranked/components/ranked-ghost-strip"
+
 import { ArenaHudBadge } from "./arena-hud-badge"
 
 const BADGE = "mx-auto flex items-center gap-1.5 rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-amber-200"
@@ -52,6 +54,7 @@ export function VariantModeBadge() {
   if (run.kind === "duel") return <DuelOpponentStrip run={run} />
   if (run.kind === "logic") return <LogicBadge />
   if (run.kind === "arena") return <ArenaHudBadge run={run} />
+  if (run.kind === "ranked") return <RankedGhostStrip run={run} />
 
   const definition = findLevel(run.levelId)
   return definition ? <LevelBadge definition={definition} /> : null

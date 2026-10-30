@@ -121,6 +121,19 @@ const rankedStateSchema = z.object({
       z.object({ kind: z.literal("level"), levelId: z.number().int().min(1).max(LEVEL_COUNT) }),
       z.object({ kind: z.literal("logic") }),
       z.object({
+        kind: z.literal("ranked"),
+        seed: z.number().int().nonnegative(),
+        ghost: z.object({
+          displayName: z.string().max(64).nullable(),
+          tier: z.string().max(16).nullable().catch(null),
+          isBot: z.boolean(),
+          actions: z.array(z.number().int().nonnegative()).max(5000),
+          times: z.array(z.number().nonnegative()).max(5000),
+        }),
+        endsAt: z.number(),
+        clockOffset: z.number().catch(0),
+      }),
+      z.object({
         kind: z.literal("arena"),
         runId: z.string().regex(/^[A-Za-z0-9]{20}$/),
         type: z.enum(ARENA_TYPES),

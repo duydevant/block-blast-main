@@ -92,6 +92,31 @@ export async function startArenaAttempt(runId: string): Promise<void> {
   })
 }
 
+/** Trận xếp hạng với bóng ma; trận trước còn đang nộp (409 `match-pending`) → nộp ngay rồi đợi xin lại. */
+export async function startRankedMatch(): Promise<void> {
+  const uid = signedInUid()
+  if (!uid) throw new Error("not-signed-in")
+  const current = useBlockPuzzleGameStore.getState()
+  if (current.variantRun?.kind === "ranked" && current.game?.isGameOver) current.queueFinishedRankedGame()
+  let issued: StartRankedGameResponse | null = null
+  for (let attempt = 0; issued === null; attempt++) {
+    try {
+      issued = await fetchJsonWithFirebaseIdToken<StartRankedGameResponse>(ApiRoutes.RANKED_MATCH, { method: "POST", expectedUid: uid })
+    } catch (error) {
+      if (!(error instanceof ApiRequestError && error.code === "match-pending") || attempt >= ARENA_PENDING_RETRIES) throw error
+      await new Promise((resolve) => setTimeout(resolve, ARENA_PENDING_DELAY_MS))
+    }
+  }
+  if (issued.mode !== "ranked" || !issued.gameId || !issued.ranked) throw new Error("unexpected-ranked-start")
+  const { ghost, endsAt, serverNow } = issued.ranked
+  useBlockPuzzleGameStore.getState().startVariantGame({
+    gameId: issued.gameId,
+    uid,
+    seed: issued.seed,
+    run: { kind: "ranked", seed: issued.seed, ghost, endsAt, clockOffset: serverNow - Date.now() },
+  })
+}
+
 /** Ván đấu 1v1: chỉ khi trận đang diễn ra (server kiểm thành viên + giờ). */
 export async function startDuelGame(duelId: string): Promise<void> {
   const uid = signedInUid()

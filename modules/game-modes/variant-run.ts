@@ -1,6 +1,8 @@
 import type { GameVariant } from "@/modules/block-puzzle/engine/game-types"
 import type { DuelPlayer } from "@/modules/duel/duel-types"
 
+import type { GhostView } from "@/modules/ranked/ranked-types"
+
 import { type ArenaType, findArenaLevel } from "./arena-catalog"
 import { findLevel, levelVariant } from "./level-catalog"
 
@@ -9,6 +11,15 @@ export type VariantRun =
   | { kind: "level"; levelId: number }
   /** "Không bế tắc": ván thường nhưng mọi khay đều có lối đi; BXH riêng. */
   | { kind: "logic" }
+  | {
+      /** Trận xếp hạng với bóng ma (cùng seed, phát lại theo nhịp thật); không cất. */
+      kind: "ranked"
+      seed: number
+      ghost: GhostView
+      /** Giờ server trận kết thúc (3 phút). */
+      endsAt: number
+      clockOffset: number
+    }
   | {
       /** Một lần thử của lượt Đấu trường (không cất: rời ván = nộp phần đã chơi). */
       kind: "arena"
@@ -41,8 +52,10 @@ export const DUEL_VARIANT: GameVariant = { noRevive: true, noPowerUps: true }
 
 /** Biến thể ván theo chế độ; id lạ (save cũ/bị sửa) → undefined = ván thường. */
 export function variantForRun(
-  run: { kind: "level"; levelId: number } | { kind: "duel" } | { kind: "logic" } | { kind: "arena"; type: string; level: number }
+  run: { kind: "level"; levelId: number } | { kind: "duel" } | { kind: "ranked" } | { kind: "logic" } | { kind: "arena"; type: string; level: number }
 ): GameVariant | undefined {
+  // Trận xếp hạng dùng luật đấu 1v1 (giống RANKED_VARIANT phía server).
+  if (run.kind === "ranked") return DUEL_VARIANT
   if (run.kind === "logic") return LOGIC_VARIANT
   if (run.kind === "arena") return findArenaLevel(run.type, run.level)?.variant
   if (run.kind === "level") {

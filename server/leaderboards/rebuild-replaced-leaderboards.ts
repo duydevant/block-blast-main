@@ -16,7 +16,7 @@ import { LEADERBOARD_TOP_SIZE } from "./merge-score-into-top-list"
  */
 export async function rebuildReplacedLeaderboards(now = new Date()): Promise<{ boards: string[]; rows: number }> {
   const db = getAdminFirestore()
-  const boardIds = [boardIdFor("form", "alltime", now), boardIdFor("form", "season", now)]
+  const boardIds = [boardIdFor("form", "alltime", now), boardIdFor("form", "season", now), boardIdFor("ranked", "alltime", now)]
   let rows = 0
   for (const boardId of boardIds) {
     const ref = leaderboardRef(db, boardId)

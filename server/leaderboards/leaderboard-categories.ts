@@ -5,6 +5,7 @@ import type { LeaderboardPeriod } from "@/modules/leaderboard/leaderboard-types"
 import type { RankedGameMode } from "@/modules/player-profile/player-profile-types"
 import { isQualifyingGame } from "@/modules/progression/player-level-curve"
 import { seasonKeyFor } from "@/lib/vn-calendar"
+import { rankedSeasonKeyFor } from "@/modules/ranked/rating-rules"
 import { isoWeekKeyFor } from "@/server/daily/daily-challenge-calendar"
 
 import { ALLTIME_BOARD_ID, boardIdForPeriod, boardIdsForRankedGame } from "./leaderboard-board-ids"
@@ -24,6 +25,7 @@ export interface BoardWrite {
  */
 export function boardIdFor(category: LeaderboardCategory, period: LeaderboardPeriod, now: Date): string {
   if (category === "score") return boardIdForPeriod(period, now)
+  if (category === "ranked") return `ranked-lp-${rankedSeasonKeyFor(now)}`
   if (period === "weekly") return `${category}-weekly-${isoWeekKeyFor(now)}`
   if (period === "season") return `${category}-season-${seasonKeyFor(now)}`
   return `${category}-${ALLTIME_BOARD_ID}`
@@ -47,6 +49,8 @@ export interface RankedGameBoardInput {
   /** Tổng sao màn trước / sau ván. */
   levelStarsBefore: number
   levelStarsAfter: number
+  /** LP sau trận xếp hạng (null = chưa xong trận xếp hạng / không phải trận xếp hạng). */
+  rankedLp?: number | null
 }
 
 /**
@@ -72,6 +76,9 @@ export function boardWritesForRankedGame(input: RankedGameBoardInput): BoardWrit
   }
   if (mode === "logic") {
     for (const period of CATEGORY_PERIODS.logic) writes.push({ boardId: boardIdFor("logic", period, now), value: summary.score, policy: "max" })
+  }
+  if (mode === "ranked" && input.rankedLp != null) {
+    writes.push({ boardId: boardIdFor("ranked", "alltime", now), value: input.rankedLp, policy: "replace" })
   }
   if (mode === "level" && input.levelStarsAfter > input.levelStarsBefore) {
     writes.push({ boardId: boardIdFor("stars", "alltime", now), value: input.levelStarsAfter, policy: "max" })

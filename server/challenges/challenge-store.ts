@@ -4,6 +4,7 @@ import { FieldValue } from "firebase-admin/firestore"
 import { z } from "zod"
 
 import type { RecordedGameAction } from "@/modules/block-puzzle/engine/replay-recorded-game-actions"
+import { CHALLENGE_MIN_MOVES, CHALLENGE_REWARD_WINDOW_MS } from "@/modules/challenge/challenge-reward-rules"
 import type { ChallengeView } from "@/modules/challenge/challenge-types"
 import { guestTagFromUid } from "@/modules/player-profile/player-profile-types"
 import { getAdminFirestore } from "@/server/firebase/firebase-admin-app"
@@ -28,6 +29,8 @@ const sessionSchema = z.object({
   status: z.string(),
   mode: z.string().catch("classic"),
   score: z.number().int().nonnegative().optional(),
+  moveCount: z.number().int().nonnegative().catch(0),
+  suspect: z.boolean().catch(false),
   /** Thách đấu đã tạo từ ván này (khác `challengeId` = thách đấu mà ván nhận thách đấu đang chơi). */
   createdChallengeId: z.string().optional(),
 })
@@ -68,6 +71,8 @@ export async function createChallengeFromSession(uid: string, gameId: string, ac
       stashUnlocked: session.data.stashUnlocked,
       sourceGameId: gameId,
       attempts: 0,
+      // Ván người thách quá ngắn / nghi bot → thách đấu vẫn chơi được nhưng không có thưởng 2 chiều.
+      expiresAtMs: !session.data.suspect && session.data.moveCount >= CHALLENGE_MIN_MOVES ? Date.now() + CHALLENGE_REWARD_WINDOW_MS : null,
       createdAt: FieldValue.serverTimestamp(),
     })
     tx.update(sessionRef, { createdChallengeId: challengeId })
@@ -97,6 +102,8 @@ export async function getChallengeView(challengeId: string): Promise<ChallengeVi
   return {
     ...opponent,
     attempts: parsed.data.attempts,
+    // Chỉ trả hạn thưởng khi còn hạn (giờ server) → trang không phải tự so giờ.
+    rewardExpiresAt: parsed.data.expiresAtMs !== null && parsed.data.expiresAtMs > Date.now() ? parsed.data.expiresAtMs : null,
     results: resultsSnap.docs.map((doc) => ({
       displayName: typeof doc.get("displayName") === "string" ? doc.get("displayName") : null,
       tag: guestTagFromUid(doc.id),

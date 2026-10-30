@@ -27,7 +27,7 @@ export const YEARS_SUBCOLLECTION = "years"
 
 const count = z.number().int().nonnegative().catch(0)
 const idList = z.array(z.string()).catch([])
-const RANKED_MODES = ["classic", "daily", "challenge", "level", "duel", "logic", "arena"] as const
+const RANKED_MODES = ["classic", "daily", "challenge", "level", "duel", "logic", "arena", "ranked"] as const
 const modeStatsSchema = z.object({ games: count, best: count, total: count })
 
 const storedPlayerSchema = z.object({
@@ -92,6 +92,25 @@ const storedPlayerSchema = z.object({
   coinsSpentTotal: count,
   /** Cấp cao nhất đã qua của từng loại Đấu trường. */
   arena: z.record(z.string(), z.number().int().min(0).max(5)).catch({}),
+  /** Thưởng thách đấu đã nhận với vai người thách trong ngày (giới hạn / ngày). */
+  challengeRewardDay: z.string().nullable().catch(null),
+  challengeRewardCount: count,
+  /** Đấu xếp hạng (mùa quý): MMR ẩn, LP, trận xếp hạng; null = chưa chơi. */
+  rating: z
+    .object({
+      season: z.string(),
+      mmr: count,
+      lp: count,
+      placements: count,
+      wins: count,
+      losses: count,
+      draws: count,
+      recentOpponents: z.array(z.string()).catch([]),
+    })
+    .nullable()
+    .catch(null),
+  /** Session trận xếp hạng đang mở (thoát không nộp → tính thua khi mở trận mới). */
+  rankedOpenGameId: z.string().nullable().catch(null),
   /** Lượt Đấu trường đang mở (null = không có). */
   arenaRunOpen: z.string().nullable().catch(null),
 })
@@ -127,6 +146,10 @@ const EMPTY_STORED_PLAYER: StoredPlayer = {
   coinsSpentTotal: 0,
   arena: {},
   arenaRunOpen: null,
+  challengeRewardDay: null,
+  challengeRewardCount: 0,
+  rating: null,
+  rankedOpenGameId: null,
 }
 
 export function parseStoredPlayer(data: unknown): StoredPlayer {

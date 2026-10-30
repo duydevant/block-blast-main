@@ -30,6 +30,8 @@ export interface BoardsAndReplayInput {
   levelStarsAfter: Readonly<Record<string, number>>
   /** Ván bị gắn cờ / tài khoản bị khoá: không bảng, không replay. */
   flagged: boolean
+  /** LP sau trận xếp hạng (bảng LP quý). */
+  rankedLp?: number | null
 }
 
 export interface PreparedBoardsAndReplay {
@@ -56,6 +58,7 @@ export async function prepareBoardsAndReplay(tx: Transaction, db: Firestore, inp
         formAfter: formFromRecent(input.recentFormScores),
         levelStarsBefore: totalLevelStars(stored.levelStars),
         levelStarsAfter: totalLevelStars(input.levelStarsAfter),
+        rankedLp: input.rankedLp ?? null,
       })
   const updates = await readBoardUpdates(tx, db, writes, input.uid)
   const tier = input.tierAfter === "unranked" ? null : input.tierAfter
@@ -65,7 +68,8 @@ export async function prepareBoardsAndReplay(tx: Transaction, db: Firestore, inp
     score: summary.score,
     previousBestScore: stored.stats.bestScore,
     topChangedBoards: topChangedBoards(updates, row),
-    suspect: input.flagged || session.mode === "arena",
+    // Đấu trường / xếp hạng: viewer chưa dựng biến thể theo lượt; trận xếp hạng đã lưu nước đi ở hồ bóng ma.
+    suspect: input.flagged || session.mode === "arena" || session.mode === "ranked",
   })
   const previousBestId = replay.personalBest ? stored.bestReplayId : null
   const previousBestPinnedByBoard =

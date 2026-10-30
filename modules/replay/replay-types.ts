@@ -41,6 +41,9 @@ export function replayStartFor(replay: Pick<GameReplayResponse, "mode" | "seed" 
       ? variantForRun({ kind: "level", levelId: replay.levelId })
       : replay.mode === "duel" || replay.mode === "logic"
         ? variantForRun({ kind: replay.mode })
+        : // Xếp hạng chơi theo luật đấu 1v1 (RANKED_VARIANT).
+          replay.mode === "ranked"
+          ? variantForRun({ kind: "duel" })
         : undefined
   return { seed: replay.seed, stashUnlocked: replay.stashUnlocked, variant }
 }

@@ -35,6 +35,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "ghostPool",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "bucket",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rand",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [
@@ -52,6 +66,12 @@
     },
     {
       "collectionGroup": "gameReplays",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "ghostPool",
       "fieldPath": "expireAt",
       "ttl": true,
       "indexes": []

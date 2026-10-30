@@ -89,6 +89,12 @@ export function GameDisplaySettingsSection() {
         checked={settings.linePreview}
         onChange={settings.setLinePreview}
       />
+      <SwitchSetting
+        label={t("emote.hideSetting")}
+        hint={t("emote.hideSettingHint")}
+        checked={settings.hideOpponentEmotes}
+        onChange={settings.setHideOpponentEmotes}
+      />
       <p className="px-1 text-xs text-violet-200/60">{t("gameSettings.keyboardHint")}</p>
     </section>
   )

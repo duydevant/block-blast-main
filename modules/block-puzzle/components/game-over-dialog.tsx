@@ -15,6 +15,7 @@ import { DailyRunGameOverNote, useDailyNewGameLabel } from "@/modules/progressio
 import { useLastGameRewardsStore } from "@/modules/progression/last-game-rewards-store"
 import { GameOverAnalysisButton } from "@/modules/analysis/components/game-over-analysis-button"
 import { ArenaResultNote } from "@/modules/game-modes/components/arena-result-note"
+import { RankedResultNote } from "@/modules/ranked/components/ranked-result-note"
 import { TierProgressNote } from "@/modules/progression/components/tier-progress-note"
 import { GameOverReplayButton } from "@/modules/replay/components/game-over-replay-button"
 import { InstallAppButton } from "@/modules/pwa/components/install-app-button"
@@ -38,6 +39,8 @@ function GameOverCloudNote({ score }: { score: number }) {
   const isDaily = useBlockPuzzleGameStore((state) => state.dailyDay !== null)
   const challenge = useBlockPuzzleGameStore((state) => state.challenge)
   const hasVariantRun = useBlockPuzzleGameStore((state) => state.variantRun !== null)
+  const gameId = useBlockPuzzleGameStore((state) => state.rankedSession?.gameId ?? null)
+  const challengeReward = useLastGameRewardsStore((state) => (state.gameId !== null && state.gameId === gameId ? (state.rewards?.challenge ?? null) : null))
   const cloudEnabled = useFirebaseAuthStore((state) => state.status !== "disabled")
   // Màn chơi có bảng kết quả riêng, đấu 1v1 có bảng trận riêng.
   if (hasVariantRun) return null
@@ -49,6 +52,11 @@ function GameOverCloudNote({ score }: { score: number }) {
     return (
       <p className={NOTE}>
         <strong className="text-amber-200">{t(score > challenge.creatorScore ? "challenge.won" : "challenge.lost", values)}</strong>
+        {challengeReward && (
+          <span className="text-[#2ec4b6]">
+            {t(challengeReward.creatorRewarded ? "challenge.rewardEarned" : "challenge.rewardEarnedSolo", { coins: formatNumber(challengeReward.coins) })}
+          </span>
+        )}
         <Link href={`${Routes.CHALLENGE}/${challenge.id}`} className={NOTE_LINK}>
           {t("challenge.viewResults")}
         </Link>
@@ -148,6 +156,7 @@ export function GameOverDialog() {
             <GameOverRunMetrics />
             <GameOverRewardChips />
             <ArenaResultNote />
+            <RankedResultNote />
             {isRankedEndless && <TierProgressNote />}
             {canRevive && (
               <button className={`${CHUNKY_BUTTON.success} h-[60px] w-full text-[22px]`} onClick={() => revive()}>

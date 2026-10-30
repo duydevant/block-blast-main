@@ -5,7 +5,7 @@ import type { LeaderboardPeriod } from "./leaderboard-types"
  * score = điểm 1 ván (bảng cũ); form = phong độ (trung vị 20 ván, ghi đè được giảm); pure = ván thuần;
  * combo = combo cao nhất; stars = tổng sao màn chơi; logic = điểm chế độ "Không bế tắc" (tách bảng như NG / Standard).
  */
-export const LEADERBOARD_CATEGORIES = ["score", "form", "pure", "combo", "stars", "logic"] as const
+export const LEADERBOARD_CATEGORIES = ["score", "form", "pure", "combo", "stars", "logic", "ranked"] as const
 export type LeaderboardCategory = (typeof LEADERBOARD_CATEGORIES)[number]
 
 /** Kỳ hợp lệ của từng hạng mục (tab đầu tiên là mặc định). */
@@ -16,6 +16,8 @@ export const CATEGORY_PERIODS: Record<LeaderboardCategory, readonly LeaderboardP
   combo: ["alltime"],
   stars: ["alltime"],
   logic: ["weekly", "alltime"],
+  /** LP đấu xếp hạng của mùa quý hiện tại (một bảng, tab "Mọi lúc" = cả quý). */
+  ranked: ["alltime"],
 }
 
 export function isLeaderboardCategory(value: string): value is LeaderboardCategory {

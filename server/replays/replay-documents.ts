@@ -57,7 +57,7 @@ export function replayDocFor(input: {
 const count = z.number().int().nonnegative()
 const storedReplaySchema = z.object({
   uid: z.string(),
-  mode: z.enum(["classic", "daily", "challenge", "level", "duel", "logic", "arena"]),
+  mode: z.enum(["classic", "daily", "challenge", "level", "duel", "logic", "arena", "ranked"]),
   seed: count,
   stashUnlocked: z.boolean(),
   levelId: z.number().int().positive().nullable().catch(null),

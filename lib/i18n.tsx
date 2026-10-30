@@ -16,7 +16,10 @@ import { gameSettingsEn, gameSettingsVi } from "@/modules/block-puzzle/game-sett
 import { analysisEn, analysisVi } from "@/modules/analysis/analysis-translations"
 import { replayEn, replayVi } from "@/modules/replay/replay-translations"
 import { seasonArenaEn, seasonArenaVi } from "@/modules/season/season-arena-translations"
+import { rankedEn, rankedVi } from "@/modules/ranked/ranked-translations"
 import { lessonsEn, lessonsVi } from "@/modules/lessons/lessons-translations"
+import { duelEmoteEn, duelEmoteVi } from "@/modules/duel/duel-emote-translations"
+import { recapEn, recapVi } from "@/modules/recap/recap-translations"
 import { uiEn, uiVi } from "./ui-translations"
 
 import { type Locale, locales } from "./i18n-locales"
@@ -55,7 +58,10 @@ const en = {
   ...analysisEn,
   ...replayEn,
   ...seasonArenaEn,
+  ...rankedEn,
   ...lessonsEn,
+  ...duelEmoteEn,
+  ...recapEn,
   ...uiEn,
 } as const
 
@@ -92,7 +98,10 @@ const vi: TranslationDictionary = {
   ...analysisVi,
   ...replayVi,
   ...seasonArenaVi,
+  ...rankedVi,
   ...lessonsVi,
+  ...duelEmoteVi,
+  ...recapVi,
   ...uiVi,
 }
 

@@ -15,6 +15,10 @@ export enum Routes {
   PROFILE_GAMES = "/profile/games",
   /** Xem lại ván: `${Routes.REPLAY}/{replayId}`. */
   REPLAY = "/game",
+  /** Tổng kết năm: `${Routes.RECAP}/{year}` (mở 15/12 → 15/01). */
+  RECAP = "/recap",
+  /** Đấu xếp hạng với bóng ma: giải, LP, BXH LP. */
+  RANKED = "/ranked",
   /** Đấu trường: chọn loại + cấp, lượt đang mở. */
   ARENA = "/arena",
   /** Mùa giải tháng: nhiệm vụ mùa, Bậc cao nhất, thưởng mùa trước. */
@@ -38,7 +42,10 @@ export enum ApiRoutes {
   MISSIONS_REPLACE = "/api/missions/replace",
   REPLAYS = "/api/replays",
   REPORTS = "/api/reports",
+  RECAP = "/api/recap",
   ARENA = "/api/arena",
+  RANKED_STATUS = "/api/ranked",
+  RANKED_MATCH = "/api/ranked/match",
   ARENA_RUNS = "/api/arena/runs",
   ARENA_ABANDON = "/api/arena/runs/abandon",
   SEASONS = "/api/seasons",

@@ -104,6 +104,14 @@ Plan: `plans/261029-2025-ap-dung-minesweeper-online-vao-block-blast/` (phase 01 
 - Theo dõi kinh tế xu: `coinsSpentTotal` (xu đã kiếm = coins + đã tiêu).
 - Cần ở host: deploy `firestore.indexes.json`; theo dõi tỉ lệ xu tiêu / kiếm sau 4 tuần (mục tiêu ≥ 0.6).
 
+## v3.0 — Đối kháng & xã hội có kiểm soát (Phase 04, 2026-10-30)
+
+- Đấu xếp hạng với bóng ma (`/ranked`): MMR ẩn + LP + 7 giải, mùa quý, bot khi thiếu người, BXH LP.
+- Thách đấu có thưởng 2 chiều (3 ngày, +50 xu cả hai, chống tài khoản phụ).
+- Emote trong phòng 1v1; tổng kết năm `/recap/{year}` (15/12 → 15/01) + ảnh share.
+- Cần ở host: `npx firebase-tools deploy --only firestore:indexes,database` (index `ghostPool`, rules emote).
+- Chưa làm: thưởng cuối quý theo giải, hàng chờ đấu realtime, push nhắc tổng kết năm.
+
 ## Còn mở
 
 - QA trên điện thoại thật (Android Chrome, iOS Safari), cả dọc và ngang.

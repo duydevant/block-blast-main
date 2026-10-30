@@ -36,6 +36,15 @@
             ".write": "auth != null && auth.uid === $uid",
             ".validate": "newData.isNumber() && newData.val() === now"
           }
+        },
+        "emotes": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && newData.exists() && (root.child('duels').child($duelId).child('state/host/uid').val() === auth.uid || root.child('duels').child($duelId).child('state/guest/uid').val() === auth.uid)",
+            ".validate": "newData.hasChildren(['e', 'at']) && (!data.exists() || now - data.child('at').val() >= 3000)",
+            "e": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 5 && newData.val() % 1 === 0" },
+            "at": { ".validate": "newData.isNumber() && newData.val() === now" },
+            "$other": { ".validate": false }
+          }
         }
       }
     }

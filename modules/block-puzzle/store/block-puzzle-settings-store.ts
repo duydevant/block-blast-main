@@ -28,6 +28,8 @@ interface BlockPuzzleSettingsStore {
   reduceMotion: ReduceMotion
   /** Đổi màu các dòng sắp xoá khi đang kéo khối tới chỗ đặt được. */
   linePreview: boolean
+  /** Ẩn emote của đối thủ trong phòng đấu 1v1. */
+  hideOpponentEmotes: boolean
   setColorTheme: (value: ColorTheme) => void
   setSound: (value: boolean) => void
   setHaptics: (value: boolean) => void
@@ -35,6 +37,7 @@ interface BlockPuzzleSettingsStore {
   setColorblindMarks: (value: boolean) => void
   setReduceMotion: (value: ReduceMotion) => void
   setLinePreview: (value: boolean) => void
+  setHideOpponentEmotes: (value: boolean) => void
   markTutorialSeen: () => void
 }
 
@@ -55,6 +58,7 @@ export const useBlockPuzzleSettingsStore = create<BlockPuzzleSettingsStore>()(
       colorblindMarks: false,
       reduceMotion: "system",
       linePreview: true,
+      hideOpponentEmotes: false,
       setColorTheme: (colorTheme) => set({ colorTheme }),
       setSound: (sound) => set({ sound }),
       setHaptics: (haptics) => set({ haptics }),
@@ -62,6 +66,7 @@ export const useBlockPuzzleSettingsStore = create<BlockPuzzleSettingsStore>()(
       setColorblindMarks: (colorblindMarks) => set({ colorblindMarks }),
       setReduceMotion: (reduceMotion) => set({ reduceMotion }),
       setLinePreview: (linePreview) => set({ linePreview }),
+      setHideOpponentEmotes: (hideOpponentEmotes) => set({ hideOpponentEmotes }),
       markTutorialSeen: () => set({ seenTutorial: true }),
     }),
     {
@@ -77,6 +82,7 @@ export const useBlockPuzzleSettingsStore = create<BlockPuzzleSettingsStore>()(
         colorblindMarks: state.colorblindMarks,
         reduceMotion: state.reduceMotion,
         linePreview: state.linePreview,
+        hideOpponentEmotes: state.hideOpponentEmotes,
       }),
       merge: (persisted, current) => {
         const saved = (persisted ?? {}) as Partial<BlockPuzzleSettingsStore>
@@ -90,6 +96,7 @@ export const useBlockPuzzleSettingsStore = create<BlockPuzzleSettingsStore>()(
           colorblindMarks: booleanOr(saved.colorblindMarks, current.colorblindMarks),
           reduceMotion: oneOf(REDUCE_MOTION_OPTIONS, saved.reduceMotion, current.reduceMotion),
           linePreview: booleanOr(saved.linePreview, current.linePreview),
+          hideOpponentEmotes: booleanOr(saved.hideOpponentEmotes, current.hideOpponentEmotes),
         }
       },
       onRehydrateStorage: () => () => useBlockPuzzleSettingsStore.setState({ hasHydrated: true }),

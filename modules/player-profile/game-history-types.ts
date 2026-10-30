@@ -27,4 +27,4 @@ export interface GameHistoryResponse {
 }
 
 export const GAME_HISTORY_PAGE_SIZE = 30
-export const GAME_HISTORY_MODES = ["classic", "logic", "daily", "challenge", "level", "duel", "arena"] as const satisfies readonly RankedGameMode[]
+export const GAME_HISTORY_MODES = ["classic", "logic", "daily", "challenge", "level", "duel", "arena", "ranked"] as const satisfies readonly RankedGameMode[]
