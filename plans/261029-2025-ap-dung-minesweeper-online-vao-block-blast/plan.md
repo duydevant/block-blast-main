@@ -12,7 +12,7 @@ Nguồn: `D:\VQD\minesweeper-online-local-20261029\NGHIEN-CUU-MINESWEEPER-ONLINE
 | 01 | [phase-01-nen-du-lieu-va-quick-wins.md](./phase-01-nen-du-lieu-va-quick-wins.md) | F1–F6 | 8–10 ngày | Đã code + commit (2026-10-29), chờ QA tay + bật TTL/index ở host |
 | 02 | [phase-02-chieu-sau-ky-nang-va-bang-chung.md](./phase-02-chieu-sau-ky-nang-va-bang-chung.md) | F7–F11 | 13–16 ngày | Đã code + commit (2026-10-29), chờ QA tay + TTL/index/cron ở host |
 | 03 | [phase-03-thu-thach-va-mua-giai.md](./phase-03-thu-thach-va-mua-giai.md) | F12–F14 | 14–17 ngày | Đã code + commit (2026-10-30), chờ QA tay |
-| 04 | [phase-04-doi-khang-va-xa-hoi.md](./phase-04-doi-khang-va-xa-hoi.md) | F15–F18 | 12–15 ngày | Đã code (2026-10-30), chờ QA tay + deploy rules RTDB |
+| 04 | [phase-04-doi-khang-va-xa-hoi.md](./phase-04-doi-khang-va-xa-hoi.md) | F15–F18 | 12–15 ngày | Đã code + commit (2026-10-30), chờ QA tay + deploy |
 
 Phase files là nguồn chuẩn khi có khác biệt chi tiết với file này (tên Bậc, số liệu, API).
 

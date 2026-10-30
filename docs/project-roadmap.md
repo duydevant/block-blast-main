@@ -109,7 +109,7 @@ Plan: `plans/261029-2025-ap-dung-minesweeper-online-vao-block-blast/` (phase 01 
 - Đấu xếp hạng với bóng ma (`/ranked`): MMR ẩn + LP + 7 giải, mùa quý, bot khi thiếu người, BXH LP.
 - Thách đấu có thưởng 2 chiều (3 ngày, +50 xu cả hai, chống tài khoản phụ).
 - Emote trong phòng 1v1; tổng kết năm `/recap/{year}` (15/12 → 15/01) + ảnh share.
-- Cần ở host: `npx firebase-tools deploy --only firestore:indexes,database` (index `ghostPool`, rules emote).
+- Cần ở host: index `ghostPool` + rules emote — service `firebase-deploy` trong docker-compose tự deploy mỗi lần `up` (cấp quyền IAM một lần, xem `deployment-guide.md`).
 - Chưa làm: thưởng cuối quý theo giải, hàng chờ đấu realtime, push nhắc tổng kết năm.
 
 ## Còn mở
