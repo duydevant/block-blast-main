@@ -13,10 +13,16 @@ import { LevelResultPanel, useLevelOutcome } from "@/modules/game-modes/componen
 import { usePlayerProfileQuery } from "@/modules/player-profile/use-player-profile-query"
 import { DailyRunGameOverNote, useDailyNewGameLabel } from "@/modules/progression/components/daily-run-game-over-note"
 import { useLastGameRewardsStore } from "@/modules/progression/last-game-rewards-store"
+import { GameOverAnalysisButton } from "@/modules/analysis/components/game-over-analysis-button"
+import { ArenaResultNote } from "@/modules/game-modes/components/arena-result-note"
+import { RankedResultNote } from "@/modules/ranked/components/ranked-result-note"
+import { TierProgressNote } from "@/modules/progression/components/tier-progress-note"
+import { GameOverReplayButton } from "@/modules/replay/components/game-over-replay-button"
 import { InstallAppButton } from "@/modules/pwa/components/install-app-button"
 
 import { useBlockPuzzleGameStore } from "../store/block-puzzle-game-store"
 import { useRestartCurrentMode } from "./use-special-mode-launcher"
+import { GameOverRunMetrics } from "./game-over-run-metrics"
 import { GameOverShareActions } from "./game-over-share-actions"
 import { GAME_PANEL, SECONDARY_BUTTON } from "./game-ui-styles"
 
@@ -33,6 +39,8 @@ function GameOverCloudNote({ score }: { score: number }) {
   const isDaily = useBlockPuzzleGameStore((state) => state.dailyDay !== null)
   const challenge = useBlockPuzzleGameStore((state) => state.challenge)
   const hasVariantRun = useBlockPuzzleGameStore((state) => state.variantRun !== null)
+  const gameId = useBlockPuzzleGameStore((state) => state.rankedSession?.gameId ?? null)
+  const challengeReward = useLastGameRewardsStore((state) => (state.gameId !== null && state.gameId === gameId ? (state.rewards?.challenge ?? null) : null))
   const cloudEnabled = useFirebaseAuthStore((state) => state.status !== "disabled")
   // Màn chơi có bảng kết quả riêng, đấu 1v1 có bảng trận riêng.
   if (hasVariantRun) return null
@@ -44,6 +52,11 @@ function GameOverCloudNote({ score }: { score: number }) {
     return (
       <p className={NOTE}>
         <strong className="text-amber-200">{t(score > challenge.creatorScore ? "challenge.won" : "challenge.lost", values)}</strong>
+        {challengeReward && (
+          <span className="text-[#2ec4b6]">
+            {t(challengeReward.creatorRewarded ? "challenge.rewardEarned" : "challenge.rewardEarnedSolo", { coins: formatNumber(challengeReward.coins) })}
+          </span>
+        )}
         <Link href={`${Routes.CHALLENGE}/${challenge.id}`} className={NOTE_LINK}>
           {t("challenge.viewResults")}
         </Link>
@@ -73,6 +86,7 @@ function GameOverRewardChips() {
   const gameId = useBlockPuzzleGameStore((state) => state.rankedSession?.gameId ?? null)
   const rewards = useLastGameRewardsStore((state) => (state.gameId !== null && state.gameId === gameId ? state.rewards : null))
   if (!rewards) return null
+  if (rewards.flagged) return <p className="text-xs text-amber-200">{t("game.flagged")}</p>
   return (
     <div className="grid w-full grid-cols-2 gap-2">
       <div className={REWARD_CHIP}>
@@ -98,6 +112,10 @@ export function GameOverDialog() {
   const submitted = useBlockPuzzleGameStore((state) => state.rankedSession?.queued ?? false)
   const [revealedKey, setRevealedKey] = useState<string | null>(null)
   const level = useLevelOutcome()
+  // Phong độ chỉ tính ván Vô tận (+ lượt đầu thử thách ngày) → chỉ nhắc Bậc ở ván Vô tận tính điểm.
+  const isRankedEndless = useBlockPuzzleGameStore(
+    (state) => state.rankedSession !== null && state.dailyDay === null && state.challenge === null && state.variantRun === null
+  )
   const newGameLabel = useDailyNewGameLabel()
 
   // Key riêng cho từng lần game over để ván mới không thừa hưởng trạng thái đã hiện.
@@ -135,7 +153,11 @@ export function GameOverDialog() {
             <AlertDialogTitle className="sr-only">{t("game.gameOverTitle")}</AlertDialogTitle>
             <span className="font-heading text-[80px] leading-[0.9] font-extrabold tracking-tight tabular-nums">{formatNumber(score)}</span>
             <AlertDialogDescription className="sr-only">{t("game.gameOverScore", { score: formatNumber(score) })}</AlertDialogDescription>
+            <GameOverRunMetrics />
             <GameOverRewardChips />
+            <ArenaResultNote />
+            <RankedResultNote />
+            {isRankedEndless && <TierProgressNote />}
             {canRevive && (
               <button className={`${CHUNKY_BUTTON.success} h-[60px] w-full text-[22px]`} onClick={() => revive()}>
                 <HeartIcon className="fill-current" aria-hidden="true" />
@@ -148,6 +170,10 @@ export function GameOverDialog() {
               {newGameLabel ?? t("game.newGame")}
             </button>
             <GameOverShareActions />
+            <div className="grid w-full grid-cols-2 gap-2 empty:hidden">
+              <GameOverReplayButton />
+              <GameOverAnalysisButton />
+            </div>
             <GameOverInstallOffer />
           </>
         )}

@@ -2,6 +2,7 @@ import type { Firestore } from "firebase-admin/firestore"
 import { z } from "zod"
 
 import type { LeaderboardRow } from "@/modules/leaderboard/leaderboard-types"
+import { PLAYER_TIER_IDS, type PlayerTierId } from "@/modules/progression/player-form-rules"
 import { LEADERBOARDS_COLLECTION } from "@/server/profile/stored-player-document"
 
 const topSchema = z.array(
@@ -9,7 +10,21 @@ const topSchema = z.array(
     uid: z.string(),
     displayName: z.string().nullable().catch(null),
     score: z.number().int().nonnegative(),
+    tier: z
+      .string()
+      .refine((value): value is PlayerTierId => PLAYER_TIER_IDS.includes(value as PlayerTierId))
+      .optional()
+      .catch(undefined),
+    replayId: z.string().max(40).optional().catch(undefined),
+    tag: z.string().max(16).optional().catch(undefined),
   })
+  // Bỏ hẳn key `tier` khi thiếu/không hợp lệ: ghi lại `undefined` vào Firestore sẽ làm hỏng cả transaction.
+  .transform(({ tier, replayId, tag, ...row }): LeaderboardRow => ({
+    ...row,
+    ...(tier ? { tier } : {}),
+    ...(replayId ? { replayId } : {}),
+    ...(tag ? { tag } : {}),
+  }))
 )
 
 export function leaderboardRef(db: Firestore, boardId: string) {

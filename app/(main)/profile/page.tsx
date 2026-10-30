@@ -4,6 +4,7 @@ import { useFirebaseAuthStore } from "@/lib/auth/firebase-auth-store"
 import { useI18n } from "@/lib/i18n"
 import { GoogleAccountButton } from "@/modules/player-profile/components/google-account-button"
 import { ProfileAccountCard } from "@/modules/player-profile/components/profile-account-card"
+import { ProfileFormAndModesCard } from "@/modules/player-profile/components/profile-form-and-modes-card"
 import { ProfileHero } from "@/modules/player-profile/components/profile-hero"
 import { ProfileStatsCard } from "@/modules/player-profile/components/profile-stats-card"
 import { ProfileAchievementsCard } from "@/modules/progression/components/profile-achievements-card"
@@ -25,6 +26,7 @@ export default function ProfilePage() {
         <>
           {isGuest && <GoogleAccountButton className="h-12 w-full rounded-2xl bg-white text-[15px] font-bold text-[#1f1f1f] hover:bg-white/90" />}
           <ProfileStatsCard />
+          <ProfileFormAndModesCard />
           <ProfileAchievementsCard />
           <ReferralInviteCard />
           <ProfileAppCard />

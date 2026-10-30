@@ -24,6 +24,7 @@ export interface MoveEffectTexts {
 
 const PARTICLES_PER_CLEARED_CELL = 2
 const MAX_PARTICLES = 100
+export const REDUCED_CLEAR_DURATION_MS = 150
 
 export function effectProgress(effect: GameEffect, now: number): number {
   return Math.min(1, Math.max(0, (now - effect.start) / effect.duration))
@@ -56,7 +57,8 @@ export function createMoveEffects(
 
   if (move.clearedCells.length > 0) {
     const cells = move.clearedCells.map((index) => ({ index, colorId: boardBeforeClear[index] || 1 }))
-    effects.push({ kind: "clear", start: now, duration: 380 * speed, cells })
+    // Giảm chuyển động: hiệu ứng xoá ngắn hẳn (≤ 150ms), không bắn hạt.
+    effects.push({ kind: "clear", start: now, duration: reducedMotion ? REDUCED_CLEAR_DURATION_MS : 380, cells })
 
     if (!reducedMotion) {
       const particles: Particle[] = cells

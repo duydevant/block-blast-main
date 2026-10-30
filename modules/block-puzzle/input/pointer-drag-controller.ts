@@ -17,8 +17,8 @@ export interface DragState {
   snap: { row: number; col: number } | null
 }
 
-/** Số ô khối được nhấc lên trên ngón tay khi kéo bằng cảm ứng. */
-const TOUCH_LIFT_IN_CELLS = 1.6
+/** Số ô khối được nhấc lên trên ngón tay khi kéo bằng cảm ứng (mặc định, khi không truyền cài đặt). */
+export const DEFAULT_TOUCH_LIFT_CELLS = 1.6
 
 /**
  * Tính lại trạng thái kéo từ vị trí con trỏ — hàm thuần để test được.
@@ -56,6 +56,8 @@ export interface PointerDragControllerOptions {
   onDrop: (slot: number, row: number, col: number) => boolean
   onStash?: (slot: number) => boolean
   onInvalidDrop: () => void
+  /** Số ô nhấc khối lên khi kéo bằng cảm ứng (theo cài đặt), đọc lúc bắt đầu kéo. */
+  getTouchLiftCells?: () => number
 }
 
 export interface PointerDragController {
@@ -98,7 +100,8 @@ export function attachPointerDragController(options: PointerDragControllerOption
     } catch {
       // Pointer không còn active — window listener vẫn bắt được pointerup.
     }
-    const liftY = event.pointerType === "touch" ? layout.cellSize * TOUCH_LIFT_IN_CELLS : 0
+    const liftCells = options.getTouchLiftCells?.() ?? DEFAULT_TOUCH_LIFT_CELLS
+    const liftY = event.pointerType === "touch" ? layout.cellSize * liftCells : 0
     const next = computeDragState(layout, game, slot, event.pointerId, x, y, liftY)
     if (!next) return
     update(next)

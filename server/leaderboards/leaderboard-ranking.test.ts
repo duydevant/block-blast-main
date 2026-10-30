@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import type { LeaderboardRow } from "@/modules/leaderboard/leaderboard-types"
 
 import { ALLTIME_BOARD_ID, boardIdForPeriod, boardIdsForRankedGame } from "./leaderboard-board-ids"
-import { mergeScoreIntoTopList, standingFromTop } from "./merge-score-into-top-list"
+import { mergeScoreIntoTopList, replaceScoreInTopList, standingFromTop } from "./merge-score-into-top-list"
 
 const row = (uid: string, score: number): LeaderboardRow => ({ uid, displayName: null, score })
 
@@ -47,15 +47,34 @@ describe("board ids", () => {
     expect(boardIdForPeriod("challenge", now)).toBe("challenge-week-2026-W44")
     expect(boardIdForPeriod("weekly", now)).toBe("weekly-2026-W44")
     expect(boardIdForPeriod("alltime", now)).toBe(ALLTIME_BOARD_ID)
+    expect(boardIdForPeriod("season", now)).toBe("season-2026-10")
   })
 
-  it("puts classic games and the first daily run on today + weekly + all-time; later runs only on the day board", () => {
-    expect(boardIdsForRankedGame("classic", now, null, false)).toEqual(["today-20261027", "weekly-2026-W44", "alltime"])
+  it("puts classic games and the first daily run on today + weekly + season + all-time; later runs only on the day board", () => {
+    expect(boardIdsForRankedGame("classic", now, null, false)).toEqual(["today-20261027", "weekly-2026-W44", "season-2026-10", "alltime"])
     // Lượt daily nộp muộn (thử thách hôm qua): bảng thử thách theo ngày của thử thách, bảng "hôm nay" theo ngày nộp.
-    expect(boardIdsForRankedGame("daily", now, "20261026", true)).toEqual(["daily-20261026", "today-20261027", "weekly-2026-W44", "alltime"])
+    expect(boardIdsForRankedGame("daily", now, "20261026", true)).toEqual(["daily-20261026", "today-20261027", "weekly-2026-W44", "season-2026-10", "alltime"])
     expect(boardIdsForRankedGame("daily", now, "20261027", true, false)).toEqual(["daily-20261027"])
     expect(boardIdsForRankedGame("duel", now, null, false)).toEqual([])
     expect(boardIdsForRankedGame("level", now, null, false)).toEqual([])
     expect(boardIdsForRankedGame("daily", now, "20261026", false)).toEqual([])
+  })
+})
+
+describe("replaceScoreInTopList", () => {
+  const top = [row("a", 900), row("b", 500), row("c", 300)]
+
+  it("moves a player down when the value drops", () => {
+    expect(replaceScoreInTopList(top, row("a", 400))?.map((item) => `${item.uid}:${item.score}`)).toEqual(["b:500", "a:400", "c:300"])
+  })
+
+  it("drops a player who falls below a full top list", () => {
+    expect(replaceScoreInTopList(top, row("a", 100), 3)?.map((item) => item.uid)).toEqual(["b", "c"])
+    expect(replaceScoreInTopList(top, row("z", 100), 3)).toBeNull()
+  })
+
+  it("inserts newcomers and ignores unchanged rows", () => {
+    expect(replaceScoreInTopList(top, row("d", 600))?.map((item) => item.uid)).toEqual(["a", "d", "b", "c"])
+    expect(replaceScoreInTopList(top, row("b", 500))).toBeNull()
   })
 })

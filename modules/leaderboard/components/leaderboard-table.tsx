@@ -1,15 +1,39 @@
 "use client"
 
 import Link from "next/link"
+import { PlayCircleIcon } from "lucide-react"
 
 import { useI18n } from "@/lib/i18n"
 import { Routes } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { guestTagFromUid } from "@/modules/player-profile/player-profile-types"
 import { useSignedInUid } from "@/modules/player-profile/use-player-profile-query"
+import { PlayerTierBadge } from "@/modules/progression/components/player-tier-badge"
 
+import type { LeaderboardCategory } from "../leaderboard-categories"
 import type { LeaderboardPeriod, LeaderboardRow } from "../leaderboard-types"
 import { useLeaderboardQuery } from "../use-leaderboard-queries"
+
+/** Tên → hồ sơ công khai khi người chơi có tag. */
+function PlayerName({ row, name }: { row: LeaderboardRow; name: string }) {
+  if (!row.tag) return <span className="truncate">{name}</span>
+  return (
+    <Link href={`${Routes.PLAYER}/${row.tag}`} className="truncate underline-offset-2 hover:underline">
+      {name}
+    </Link>
+  )
+}
+
+/** Giá trị kèm nút xem lại ván ghi giá trị đó (nếu có replay) — mọi kỷ lục đều kiểm chứng được. */
+function ScoreWithReplay({ row, label, className, children }: { row: LeaderboardRow; label: string; className: string; children: string }) {
+  if (!row.replayId) return <span className={className}>{children}</span>
+  return (
+    <Link href={`${Routes.REPLAY}/${row.replayId}`} className={`inline-flex items-center gap-1 hover:underline ${className}`} aria-label={`${label}: ${children}`}>
+      <PlayCircleIcon className="size-3.5 opacity-70" aria-hidden="true" />
+      {children}
+    </Link>
+  )
+}
 
 /** Bục top 3 (giữa cao nhất), màu vàng / bạc / đồng. */
 const PODIUM = [
@@ -22,10 +46,20 @@ const PODIUM = [
  * Top của một kỳ: bục top 3 + danh sách + thanh "hạng của bạn" (kể cả khi ngoài top).
  * `initialTop` (render server) hiện trong lúc chờ đăng nhập/tải, chưa có thanh hạng của mình.
  */
-export function LeaderboardTable({ period, initialTop }: { period: LeaderboardPeriod; initialTop?: LeaderboardRow[] }) {
+export function LeaderboardTable({
+  period,
+  category = "score",
+  initialTop,
+}: {
+  period: LeaderboardPeriod
+  category?: LeaderboardCategory
+  initialTop?: LeaderboardRow[]
+}) {
   const { t, formatNumber } = useI18n()
   const uid = useSignedInUid()
-  const query = useLeaderboardQuery(period)
+  const query = useLeaderboardQuery(period, category)
+  // Giá trị theo hạng mục: combo "x12", sao "45★", còn lại là số.
+  const valueOf = (value: number) => (category === "combo" ? `x${formatNumber(value)}` : category === "stars" ? `${formatNumber(value)}★` : formatNumber(value))
 
   if (query.isError && !initialTop) return <p className="text-sm text-destructive">{t("leaderboard.loadFailed")}</p>
   if (!query.data && !initialTop) return <p className="text-sm text-muted-foreground">{t("profile.loading")}</p>
@@ -50,10 +84,15 @@ export function LeaderboardTable({ period, initialTop }: { period: LeaderboardPe
               <span className={cn("flex items-center justify-center rounded-full font-heading text-2xl font-extrabold text-[#04211e] uppercase", avatar)} aria-hidden="true">
                 {nameOf(row).charAt(0)}
               </span>
-              <span className={cn("max-w-full truncate text-[13px] font-bold", row.uid === uid && "text-[#2ec4b6]")}>{nameOf(row)}</span>
+              <span className={cn("flex max-w-full items-center gap-1 text-[13px] font-bold", row.uid === uid && "text-[#2ec4b6]")}>
+                <PlayerName row={row} name={nameOf(row)} />
+                {row.tier && <PlayerTierBadge tier={row.tier} compact />}
+              </span>
               <div className={cn("flex w-full flex-col items-center justify-center gap-0.5 rounded-t-2xl rounded-b-md bg-[#14403b]", height)}>
                 <span className="font-heading text-[26px] leading-none font-extrabold">{rankOf(place - 1)}</span>
-                <span className="text-sm font-extrabold tabular-nums">{formatNumber(row.score)}</span>
+                <ScoreWithReplay row={row} label={t("leaderboard.watch")} className="text-sm font-extrabold tabular-nums">
+                  {valueOf(row.score)}
+                </ScoreWithReplay>
               </div>
             </div>
           )
@@ -68,11 +107,14 @@ export function LeaderboardTable({ period, initialTop }: { period: LeaderboardPe
             return (
               <li key={row.uid} className={cn("flex items-center gap-3 border-b border-[#184a44] py-2.5 last:border-0", isMe && "font-extrabold text-[#2ec4b6]")}>
                 <span className="w-7 font-extrabold text-[#9fe3db] tabular-nums">{index > 0 && top[index - 1].score === row.score ? "" : rankOf(index)}</span>
-                <span className="min-w-0 flex-1 truncate font-semibold">
-                  {nameOf(row)}
-                  {isMe && <span className="ml-1.5 text-xs">({t("leaderboard.you")})</span>}
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 font-semibold">
+                  <PlayerName row={row} name={nameOf(row)} />
+                  {row.tier && <PlayerTierBadge tier={row.tier} compact />}
+                  {isMe && <span className="shrink-0 text-xs">({t("leaderboard.you")})</span>}
                 </span>
-                <span className="font-extrabold tabular-nums">{formatNumber(row.score)}</span>
+                <ScoreWithReplay row={row} label={t("leaderboard.watch")} className="font-extrabold tabular-nums">
+                  {valueOf(row.score)}
+                </ScoreWithReplay>
               </li>
             )
           })}
@@ -85,7 +127,7 @@ export function LeaderboardTable({ period, initialTop }: { period: LeaderboardPe
             <>
               <span className="font-heading text-[26px] font-extrabold">#{formatNumber(me.rank)}</span>
               <span className="flex min-w-0 flex-col leading-tight">
-                <span className="font-extrabold">{t("ranking.you", { score: formatNumber(me.score) })}</span>
+                <span className="font-extrabold">{t("ranking.you", { score: valueOf(me.score) })}</span>
                 {me.nextScore !== null && (
                   <span className="text-[13px] font-semibold">{t("ranking.toNext", { points: formatNumber(me.nextScore - me.score + 1), rank: formatNumber(Math.max(1, me.rank - 1)) })}</span>
                 )}

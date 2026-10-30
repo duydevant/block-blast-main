@@ -20,8 +20,10 @@ import { duelPlayHref, joinDuelRoom, settleDuelRoom } from "../duel-actions"
 import { flushDuelMoves } from "../duel-move-stream"
 import type { DuelPlayer } from "../duel-types"
 import { useDuelMatch } from "../use-duel-match"
+import { useDuelEmotes } from "../use-duel-emotes"
 import { useDuelOnline } from "../use-duel-online"
 import { formatDuelClock } from "./duel-hud"
+import { DuelEmoteBar, useEmoteLookup } from "./duel-emote-bar"
 import { DuelInviteButtons } from "./duel-invite-buttons"
 import { DuelLiveBoards } from "./duel-live-boards"
 import { DuelRoomCode } from "./duel-room-code"
@@ -42,6 +44,8 @@ export function DuelRoomView({ duelId }: { duelId: string }) {
   const uid = useSignedInUid()
   const { state, now, accept } = useDuelMatch(duelId)
   const online = useDuelOnline(state ? duelId : null)
+  const emotes = useDuelEmotes(state ? duelId : null)
+  const emoteOf = useEmoteLookup(emotes, uid)
   const [busy, setBusy] = useState(false)
   const navigatedRound = useRef(0)
   // Save ván nằm ở store màn chơi (đọc lười) → biết đã chơi xong ván hiện tại trên máy này chưa.
@@ -138,7 +142,12 @@ export function DuelRoomView({ duelId }: { duelId: string }) {
       )}
 
       {state.status === "finished" && <DuelRoundFinished state={state} uid={uid} nameOf={nameOf} onState={accept} />}
-      {(state.status === "playing" || state.status === "finished") && <DuelLiveBoards state={state} nameOf={nameOf} online={online} />}
+      {(state.status === "playing" || state.status === "finished") && (
+        <>
+          <DuelLiveBoards state={state} nameOf={nameOf} online={online} emoteOf={emoteOf} />
+          {isMember && <DuelEmoteBar emotes={emotes} />}
+        </>
+      )}
       <DuelRoundHistory state={state} nameOf={nameOf} />
 
       {state.guest && state.status !== "expired" && (

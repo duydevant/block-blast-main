@@ -23,6 +23,10 @@ export const storedChallengeSchema = z.object({
   seed: z.number().int().nonnegative(),
   stashUnlocked: z.boolean(),
   attempts: z.number().int().nonnegative().catch(0),
+  /** Hạn thưởng 2 chiều (ms); thách đấu cũ không có → không thưởng. */
+  expiresAtMs: z.number().int().nullable().catch(null),
+  /** uid người nhận đã được thưởng. */
+  rewardedUids: z.record(z.string(), z.boolean()).catch({}),
 })
 
 export type StoredChallenge = z.infer<typeof storedChallengeSchema>

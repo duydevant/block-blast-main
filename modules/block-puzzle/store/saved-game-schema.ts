@@ -13,6 +13,18 @@ const trayPieceSchema = z.object({
   colorId: z.number().int().min(1).max(BLOCK_COLOR_COUNT),
 })
 
+/** Chỉ số ván chỉ để hiển thị/thống kê (server tự replay) → hỏng thì bỏ, không bỏ cả ván. */
+const runStatsSchema = z.object({
+  clearMoves: nonNegativeInt,
+  multiClears: z.tuple([nonNegativeInt, nonNegativeInt, nonNegativeInt]),
+  maxLinesInMove: nonNegativeInt.max(16),
+  bestCombo: nonNegativeInt,
+  boardClears: nonNegativeInt,
+  stashUses: nonNegativeInt,
+  replaceUses: nonNegativeInt,
+  reviveUsed: z.boolean(),
+})
+
 /** localStorage do người dùng kiểm soát → validate chặt trước khi RESTORE. */
 const gameStateSchema = z.object({
   board: z.array(z.number().int().min(0).max(BLOCK_COLOR_COUNT)).length(BOARD_CELL_COUNT),
@@ -32,7 +44,14 @@ const gameStateSchema = z.object({
   moveLimit: z.number().int().min(1).max(1000).optional(),
   endedEarly: z.boolean().optional(),
   noPowerUps: z.boolean().optional(),
+  guaranteedTray: z.boolean().optional(),
+  // Bài học: khay cố định còn lại (shapeId phải có trong catalog).
+  fixedTrays: z
+    .array(z.array(z.string().refine((id) => findShape(id) !== undefined, "unknown shape")).min(1).max(TRAY_SIZE))
+    .max(32)
+    .optional(),
   linesCleared: nonNegativeInt.optional(),
+  runStats: runStatsSchema.optional().catch(undefined),
   generatorState: z.union([
     z.object({
       stepsBeforeSmart: z.number().int().min(-1).max(4),

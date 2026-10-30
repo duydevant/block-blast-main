@@ -1,10 +1,14 @@
 /** Kiểu dữ liệu profile dùng chung giữa API route (server) và UI (client). */
 
+import type { ChallengeRewardResult } from "@/modules/challenge/challenge-reward-rules"
 import type { ChallengeOpponent } from "@/modules/challenge/challenge-types"
 import type { DuelStartInfo } from "@/modules/duel/duel-types"
+import type { ArenaAttemptReward, ArenaStartInfo } from "@/modules/game-modes/arena-types"
+import type { RankedMatchInfo, RankedMatchReward } from "@/modules/ranked/ranked-types"
 import type { DailyGoals, DailyWeekStatus } from "@/modules/progression/daily-challenge-goals"
 import type { DailyRewardStatus } from "@/modules/progression/daily-reward-track"
 import type { DailyMissionStatus } from "@/modules/progression/daily-mission-catalog"
+import type { PlayerTier, PlayerTierId } from "@/modules/progression/player-form-rules"
 
 export interface PlayerStats {
   gamesPlayed: number
@@ -14,7 +18,22 @@ export interface PlayerStats {
   bestCombo: number
   boardClears: number
   totalMoves: number
+  /** Ván "thuần" (không Cất / Đổi khối / Hồi sinh) đủ nước. */
+  pureGames: number
+  bestPureScore: number
+  /** Tổng số nước xoá ≥ 3 dòng cùng lúc. */
+  multiClears3: number
+  maxLinesInMove: number
 }
+
+/** Thống kê gọn theo từng chế độ chơi. */
+export interface ModeStats {
+  games: number
+  best: number
+  total: number
+}
+
+export type StatsByMode = Partial<Record<RankedGameMode, ModeStats>>
 
 /** Chuỗi ngày liên tiếp hoàn thành thử thách hằng ngày. */
 export interface DailyStreak {
@@ -46,6 +65,21 @@ export interface PlayerProfile {
   /** Số sao cao nhất từng màn ("1" → 3). */
   levelStars: Record<string, number>
   duelStats: DuelStats
+  /** Phong độ (trung vị các ván Vô tận gần nhất); null = chưa đủ ván. */
+  form: number | null
+  /** Số ván đang có trong cửa sổ phong độ. */
+  formGames: number
+  /** Bậc hiện tại theo phong độ. */
+  tier: PlayerTier
+  /** Bậc cao nhất từng đạt. */
+  highestTier: PlayerTier
+  statsByMode: StatsByMode
+  /** Số ngày thử thách đạt ★★★ (tiến độ thành tích). */
+  dailyThreeStarDays: number
+  /** Huy hiệu mùa đã nhận ("2026-11:gold"). */
+  seasonBadges: string[]
+  /** Cấp cao nhất đã qua mỗi loại Đấu trường (điểm Đấu trường = tổng). */
+  arena: Record<string, number>
 }
 
 export interface DuelStats {
@@ -57,9 +91,9 @@ export const EMPTY_DAILY_STREAK: DailyStreak = { current: 0, best: 0, lastDailyD
 
 /**
  * classic: seed ngẫu nhiên; daily: seed chung của ngày; challenge: seed của ván người thách đấu;
- * level: màn chơi (seed + bàn cố định); duel: đấu 1v1 cùng seed.
+ * level: màn chơi (seed + bàn cố định); duel: đấu 1v1 cùng seed; logic: "Không bế tắc" (khay luôn có lối đi).
  */
-export type RankedGameMode = "classic" | "daily" | "challenge" | "level" | "duel"
+export type RankedGameMode = "classic" | "daily" | "challenge" | "level" | "duel" | "logic" | "arena" | "ranked"
 
 export const EMPTY_PLAYER_STATS: PlayerStats = {
   gamesPlayed: 0,
@@ -69,6 +103,10 @@ export const EMPTY_PLAYER_STATS: PlayerStats = {
   bestCombo: 0,
   boardClears: 0,
   totalMoves: 0,
+  pureGames: 0,
+  bestPureScore: 0,
+  multiClears3: 0,
+  maxLinesInMove: 0,
 }
 
 export const DISPLAY_NAME_MIN_LENGTH = 2
@@ -107,6 +145,10 @@ export interface StartRankedGameResponse {
   levelId?: number | null
   /** Chỉ có ở duel. */
   duel?: DuelStartInfo | null
+  /** Chỉ có ở arena (lần thử của lượt Đấu trường). */
+  arena?: ArenaStartInfo | null
+  /** Chỉ có ở ranked (trận với bóng ma). */
+  ranked?: RankedMatchInfo | null
 }
 
 /** Phần thưởng một ván đã replay mang lại (để client báo cho người chơi). */
@@ -125,6 +167,18 @@ export interface GameRewards {
   level?: { id: number; stars: number; improved: boolean } | null
   /** Lượt thử thách ngày tính điểm: sao của ngày sau lượt này, sao / kỷ lục mới đạt (xu đã gộp vào `coins`). */
   daily?: DailyRunGameReward | null
+  /** Bậc vừa lần đầu đạt được ở ván này (cao nhất nếu lên nhiều Bậc); xu thưởng đã gộp vào `coins`. */
+  tierUp?: PlayerTierId | null
+  /** Ván bị gắn cờ (nhịp chơi bất thường / tài khoản bị khoá): không vào BXH, không xu. */
+  flagged?: boolean
+  /** Ván được lưu replay (kỷ lục / lọt top) → xem lại tại /game/{replayId}. */
+  replayId?: string | null
+  /** Trận xếp hạng: thắng / thua / hoà với bóng ma, LP trước / sau. */
+  ranked?: RankedMatchReward | null
+  /** Thách đấu: vượt điểm trong hạn → cả hai nhận xu (đã gộp vào `coins`). */
+  challenge?: ChallengeRewardResult | null
+  /** Lần thử Đấu trường: đạt chưa, lượt thắng / thua / còn mở (xu + XP thắng lượt đã gộp vào phần thưởng ván). */
+  arena?: ArenaAttemptReward | null
 }
 
 export interface DailyRunGameReward {
@@ -136,7 +190,7 @@ export interface DailyRunGameReward {
   coins: number
 }
 
-export const NO_GAME_REWARDS: GameRewards = { xp: 0, coins: 0, levelUp: null, missions: [], achievements: [], referralBonus: false, level: null }
+export const NO_GAME_REWARDS: GameRewards = { xp: 0, coins: 0, levelUp: null, missions: [], achievements: [], referralBonus: false, level: null, tierUp: null }
 
 /** POST /api/games/submit */
 export interface SubmitRankedGameResponse {
@@ -170,6 +224,8 @@ export interface DailyStatusResponse {
   streak: DailyStreak
   /** 3 nhiệm vụ hôm nay kèm tiến độ. */
   missions: DailyMissionStatus[]
+  /** Hôm nay còn lượt đổi nhiệm vụ (1 lần/ngày). */
+  missionReplaceAvailable: boolean
   /** Thưởng hoàn thành thử thách hôm nay (vòng 7 ngày theo chuỗi). */
   reward: DailyRewardStatus
 }

@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "balance": "vite-node scripts/run-balance-report.ts"
+    "balance": "vite-node scripts/run-balance-report.ts",
+    "arena-balance": "vite-node --config vitest.config.ts scripts/run-arena-balance.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

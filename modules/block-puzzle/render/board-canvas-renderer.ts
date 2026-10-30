@@ -17,6 +17,8 @@ export interface RenderView {
   /** Nhãn ô cất (đã dịch): "Cất" + điều kiện mở khi còn khoá. */
   holdLabel: string
   holdLockedLabel: string
+  /** Báo trước dòng sắp xoá khi kéo (mặc định bật). */
+  linePreview?: boolean
 }
 
 function drawBoard(ctx: CanvasRenderingContext2D, layout: CanvasLayout, view: RenderView) {
@@ -30,7 +32,7 @@ function drawBoard(ctx: CanvasRenderingContext2D, layout: CanvasLayout, view: Re
   ctx.strokeStyle = BOARD_COLORS.panelEdge
   ctx.stroke()
 
-  const preview = computePlacementPreview(view.game, view.drag)
+  const preview = computePlacementPreview(view.game, view.drag, view.linePreview ?? true)
   const highlighted = new Set<number>()
   if (preview) {
     for (const row of preview.rows) for (let c = 0; c < BOARD_SIZE; c++) highlighted.add(row * BOARD_SIZE + c)

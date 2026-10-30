@@ -2,21 +2,20 @@ import "server-only"
 
 import { FieldValue } from "firebase-admin/firestore"
 
-import { LEADERBOARD_PERIODS } from "@/modules/leaderboard/leaderboard-types"
 import { getAdminFirestore } from "@/server/firebase/firebase-admin-app"
 import { LEADERBOARD_ENTRIES_SUBCOLLECTION } from "@/server/profile/stored-player-document"
 
-import { boardIdForPeriod } from "./leaderboard-board-ids"
+import { currentBoardIds } from "./leaderboard-categories"
 import { leaderboardRef, parseLeaderboardTop } from "./leaderboard-documents"
 
 /**
- * Đổi tên → cập nhật tên trên các bảng hiện hành (ngày/tuần/mọi lúc). Bảng cũ giữ tên lúc đó.
+ * Đổi tên → cập nhật tên trên các bảng hiện hành (mọi hạng mục, ngày/tuần/mọi lúc). Bảng cũ giữ tên lúc đó.
  * Chạy trong transaction để không ghi đè snapshot vừa được một lượt nộp ván khác cập nhật.
  */
 export async function renamePlayerOnCurrentLeaderboards(uid: string, displayName: string): Promise<void> {
   const db = getAdminFirestore()
   const now = new Date()
-  const boardRefs = LEADERBOARD_PERIODS.map((period) => leaderboardRef(db, boardIdForPeriod(period, now)))
+  const boardRefs = currentBoardIds(now).map((boardId) => leaderboardRef(db, boardId))
   const entryRefs = boardRefs.map((ref) => ref.collection(LEADERBOARD_ENTRIES_SUBCOLLECTION).doc(uid))
 
   await db.runTransaction(async (tx) => {

@@ -3,7 +3,7 @@ import { startChallengeGame } from "@/modules/challenge/challenge-game-actions"
 import { CHALLENGE_ID_PATTERN } from "@/modules/challenge/challenge-types"
 import { DUEL_ID_PATTERN } from "@/modules/duel/duel-types"
 import { findLevel } from "@/modules/game-modes/level-catalog"
-import { startDuelGame, startLevelGame } from "@/modules/game-modes/start-variant-game"
+import { startArenaAttempt, startDuelGame, startLevelGame, startLogicGame, startRankedMatch } from "@/modules/game-modes/start-variant-game"
 
 import { useBlockPuzzleGameStore } from "./store/block-puzzle-game-store"
 import { type GameModeSlot, modeSlotOf, type ParkedGame } from "./store/parked-mode-games"
@@ -12,6 +12,9 @@ import { startDailyChallenge } from "./store/start-daily-challenge"
 /** Chế độ người chơi muốn vào (từ link `/play?…` hoặc menu). */
 export type SpecialMode =
   | { kind: "endless" }
+  | { kind: "logic" }
+  | { kind: "arena"; runId: string }
+  | { kind: "ranked" }
   | { kind: "daily" }
   | { kind: "challenge"; id: string }
   | { kind: "level"; id: number }
@@ -21,6 +24,10 @@ export type SpecialMode =
 export function modeFromQuery(search: string): SpecialMode | null {
   const params = new URLSearchParams(search)
   if (params.has("endless")) return { kind: "endless" }
+  if (params.has("logic")) return { kind: "logic" }
+  if (params.has("ranked")) return { kind: "ranked" }
+  const arenaRunId = params.get("arena")
+  if (arenaRunId && /^[A-Za-z0-9]{20}$/.test(arenaRunId)) return { kind: "arena", runId: arenaRunId }
   const challengeId = params.get("challenge")
   if (challengeId && CHALLENGE_ID_PATTERN.test(challengeId)) return { kind: "challenge", id: challengeId }
   const duelId = params.get("duel")
@@ -31,9 +38,9 @@ export function modeFromQuery(search: string): SpecialMode | null {
   return params.has("daily") ? { kind: "daily" } : null
 }
 
-/** Ngăn ván của chế độ (null = đấu 1v1, không cất). */
+/** Ngăn ván của chế độ (null = đấu 1v1 / Đấu trường, không cất). */
 function slotOfMode(mode: SpecialMode): GameModeSlot | null {
-  return mode.kind === "duel" ? null : mode.kind
+  return mode.kind === "duel" || mode.kind === "arena" || mode.kind === "ranked" ? null : mode.kind
 }
 
 /** Ván (đang chơi hoặc đã cất) đúng là ván của chế độ được mở: cùng ngày / tuần / màn / thách đấu. */
@@ -42,12 +49,15 @@ function gameMatchesMode(game: Pick<ParkedGame, "dailyDay" | "challenge" | "vari
   if (mode.kind === "daily") return game.dailyDay === dayKeyFor(now)
   if (mode.kind === "level") return game.variantRun?.kind === "level" && game.variantRun.levelId === mode.id
   if (mode.kind === "challenge") return game.challenge?.id === mode.id
+  if (mode.kind === "logic") return game.variantRun?.kind === "logic"
   return mode.kind === "endless"
 }
 
 /** Đang chơi đúng ván của chế độ này rồi (chưa hết ván) → không làm gì; đấu 1v1: cùng phòng + cùng ván. */
 export function isAlreadyInMode(mode: SpecialMode): boolean {
   const state = useBlockPuzzleGameStore.getState()
+  if (mode.kind === "ranked") return state.variantRun?.kind === "ranked" && state.game?.isGameOver === false
+  if (mode.kind === "arena") return state.variantRun?.kind === "arena" && state.variantRun.runId === mode.runId && state.game?.isGameOver === false
   if (mode.kind === "duel") {
     const run = state.variantRun
     return run?.kind === "duel" && run.duelId === mode.id && (mode.round === null || run.round === mode.round)
@@ -65,6 +75,9 @@ export function canResumeMode(mode: SpecialMode): boolean {
 /** Xin ván mới của chế độ (server cấp seed); "practice" = lượt luyện tập thử thách ngày. */
 async function startFreshMode(mode: SpecialMode): Promise<"practice" | void> {
   if (mode.kind === "endless") return useBlockPuzzleGameStore.getState().startNewGame()
+  if (mode.kind === "logic") return startLogicGame()
+  if (mode.kind === "arena") return startArenaAttempt(mode.runId)
+  if (mode.kind === "ranked") return startRankedMatch()
   if (mode.kind === "challenge") return startChallengeGame(mode.id)
   if (mode.kind === "duel") return startDuelGame(mode.id)
   if (mode.kind === "level") return void (await startLevelGame(mode.id))
@@ -95,6 +108,9 @@ export async function enterMode(mode: SpecialMode): Promise<"practice" | void> {
 export async function restartCurrentMode(): Promise<"practice" | void> {
   const { variantRun, dailyDay, challenge, startNewGame } = useBlockPuzzleGameStore.getState()
   if (variantRun?.kind === "level") return void (await startLevelGame(variantRun.levelId))
+  if (variantRun?.kind === "logic") return startLogicGame()
+  if (variantRun?.kind === "arena") return startArenaAttempt(variantRun.runId)
+  if (variantRun?.kind === "ranked") return startRankedMatch()
   if (dailyDay) return (await startDailyChallenge()) === "practice" ? "practice" : undefined
   if (challenge) return startChallengeGame(challenge.id)
   startNewGame()

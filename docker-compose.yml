@@ -36,6 +36,26 @@ services:
       - web
     restart: on-failure
 
+  # Chạy một lần mỗi `up`: deploy index + TTL + rules Firestore / RTDB từ file trong repo (FIREBASE_AUTO_DEPLOY=0 để tắt).
+  # Dùng service account FIREBASE_ADMIN_* — cần cấp quyền IAM một lần (docs/deployment-guide.md). Lỗi không chặn `web`.
+  firebase-deploy:
+    image: node:22-alpine
+    env_file:
+      - ${ENV_FILE:-.env}
+    volumes:
+      - ./firebase.json:/firebase/firebase.json:ro
+      - ./.firebaserc:/firebase/.firebaserc:ro
+      - ./firestore.rules:/firebase/firestore.rules:ro
+      - ./firestore.indexes.json:/firebase/firestore.indexes.json:ro
+      - ./database.rules.json:/firebase/database.rules.json:ro
+      - ./docker/firebase-deploy.sh:/firebase-deploy.sh:ro
+      - firebase-npm-cache:/root/.npm
+    entrypoint: ["sh", "/firebase-deploy.sh"]
+    restart: "no"
+
+volumes:
+  firebase-npm-cache:
+
 secrets:
   app_env:
     file: ${ENV_FILE:-.env}

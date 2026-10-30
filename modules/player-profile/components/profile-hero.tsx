@@ -7,6 +7,7 @@ import { ICON_TILE } from "@/components/game-ui/game-ui-classes"
 import { CoinsChip } from "@/components/game-ui/stat-chips"
 import { useI18n } from "@/lib/i18n"
 import { Routes } from "@/lib/routes"
+import { PlayerTierBadge } from "@/modules/progression/components/player-tier-badge"
 import { levelProgressForXp } from "@/modules/progression/player-level-curve"
 
 import { usePlayerProfileQuery } from "../use-player-profile-query"
@@ -39,7 +40,10 @@ export function ProfileHero() {
         </span>
       </div>
       <div className="flex min-w-0 flex-col gap-0.5">
-        <h1 className="truncate font-heading text-[22px] leading-none font-extrabold">{name}</h1>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <h1 className="truncate font-heading text-[22px] leading-none font-extrabold">{name}</h1>
+          {profile && <PlayerTierBadge tier={profile.tier} compact />}
+        </span>
         <span className="text-[13px] font-bold text-[#ffcf7a]">
           {t("profile.levelLine", { level: progress.level, xp: formatNumber(progress.xpIntoLevel), next: formatNumber(progress.xpForNextLevel) })}
         </span>

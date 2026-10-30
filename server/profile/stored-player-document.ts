@@ -5,6 +5,7 @@ import {
   EMPTY_PLAYER_STATS,
   type PlayerProfile,
 } from "@/modules/player-profile/player-profile-types"
+import { FORM_WINDOW, formFromRecent, highestTier, tierForForm } from "@/modules/progression/player-form-rules"
 import { effectiveDailyStreak } from "@/server/daily/advance-daily-streak"
 
 /** Tên collection Firestore — dùng chung cho mọi chỗ đọc/ghi. */
@@ -19,9 +20,15 @@ export const LEADERBOARD_ENTRIES_SUBCOLLECTION = "entries"
 export const MISSIONS_SUBCOLLECTION = "missions"
 /** referralCodes/{code} → { uid }: tra mã mời ra người mời. */
 export const REFERRAL_CODES_COLLECTION = "referralCodes"
+/** users/{uid}/games/{gameId}: lịch sử ván đã nộp (TTL `expireAt`). */
+export const GAMES_HISTORY_SUBCOLLECTION = "games"
+/** users/{uid}/years/{YYYY}: bộ đếm cả năm (tổng kết năm). */
+export const YEARS_SUBCOLLECTION = "years"
 
 const count = z.number().int().nonnegative().catch(0)
 const idList = z.array(z.string()).catch([])
+const RANKED_MODES = ["classic", "daily", "challenge", "level", "duel", "logic", "arena", "ranked"] as const
+const modeStatsSchema = z.object({ games: count, best: count, total: count })
 
 const storedPlayerSchema = z.object({
   displayName: z.string().nullable().catch(null),
@@ -35,6 +42,10 @@ const storedPlayerSchema = z.object({
       bestCombo: count,
       boardClears: count,
       totalMoves: count,
+      pureGames: count,
+      bestPureScore: count,
+      multiClears3: count,
+      maxLinesInMove: count,
     })
     .catch(EMPTY_PLAYER_STATS),
   streak: z
@@ -59,6 +70,49 @@ const storedPlayerSchema = z.object({
   dailyBest: count,
   /** Điểm cao nhất các ngày thử thách gần đây (tính phong độ). Thiếu = người chơi cũ chưa chuyển, đọc lịch sử một lần. */
   dailyRecent: z.record(z.string().regex(/^\d{8}$/), z.number().int().nonnegative()).optional().catch(undefined),
+  /** Điểm các ván tính phong độ gần nhất (mới nhất ở cuối, tối đa FORM_WINDOW). */
+  recentFormScores: z
+    .array(z.number().int().nonnegative())
+    .catch([])
+    .transform((list) => list.slice(-FORM_WINDOW)),
+  /** Bậc đã nhận thưởng lần đầu (cũng là các Bậc từng đạt). */
+  tierRewardsClaimed: idList,
+  statsByMode: z.partialRecord(z.enum(RANKED_MODES), modeStatsSchema).catch({}),
+  /** Số ngày thử thách đạt ★★★. */
+  dailyThreeStarDays: count,
+  /** Khoá thủ công (console) sau khi xác nhận gian lận: không vào BXH, không nhận xu. */
+  banned: z.boolean().catch(false),
+  /** Replay của ván kỷ lục cá nhân (giữ vĩnh viễn). */
+  bestReplayId: z.string().nullable().catch(null),
+  /** Slug các bài học kỹ thuật đã qua (thưởng xu lần đầu). */
+  lessonsDone: idList,
+  /** Huy hiệu mùa đã nhận ("2026-11:gold"). */
+  seasonBadges: idList,
+  /** Tổng xu đã tiêu (theme, Đấu trường) — xu đã kiếm = coins + coinsSpentTotal (đo kinh tế xu). */
+  coinsSpentTotal: count,
+  /** Cấp cao nhất đã qua của từng loại Đấu trường. */
+  arena: z.record(z.string(), z.number().int().min(0).max(5)).catch({}),
+  /** Thưởng thách đấu đã nhận với vai người thách trong ngày (giới hạn / ngày). */
+  challengeRewardDay: z.string().nullable().catch(null),
+  challengeRewardCount: count,
+  /** Đấu xếp hạng (mùa quý): MMR ẩn, LP, trận xếp hạng; null = chưa chơi. */
+  rating: z
+    .object({
+      season: z.string(),
+      mmr: count,
+      lp: count,
+      placements: count,
+      wins: count,
+      losses: count,
+      draws: count,
+      recentOpponents: z.array(z.string()).catch([]),
+    })
+    .nullable()
+    .catch(null),
+  /** Session trận xếp hạng đang mở (thoát không nộp → tính thua khi mở trận mới). */
+  rankedOpenGameId: z.string().nullable().catch(null),
+  /** Lượt Đấu trường đang mở (null = không có). */
+  arenaRunOpen: z.string().nullable().catch(null),
 })
 
 /** Field người dùng được ghi trong users/{uid}; doc thiếu/hỏng field nào thì field đó về mặc định. */
@@ -81,6 +135,21 @@ const EMPTY_STORED_PLAYER: StoredPlayer = {
   levelStars: {},
   duelStats: { played: 0, won: 0 },
   dailyBest: 0,
+  recentFormScores: [],
+  tierRewardsClaimed: [],
+  statsByMode: {},
+  dailyThreeStarDays: 0,
+  banned: false,
+  bestReplayId: null,
+  lessonsDone: [],
+  seasonBadges: [],
+  coinsSpentTotal: 0,
+  arena: {},
+  arenaRunOpen: null,
+  challengeRewardDay: null,
+  challengeRewardCount: 0,
+  rating: null,
+  rankedOpenGameId: null,
 }
 
 export function parseStoredPlayer(data: unknown): StoredPlayer {
@@ -104,6 +173,22 @@ export function toPlayerProfile(uid: string, stored: StoredPlayer, today: string
     referred: stored.referredBy !== null,
     levelStars: stored.levelStars,
     duelStats: stored.duelStats,
+    ...playerFormView(stored),
+    statsByMode: stored.statsByMode,
+    dailyThreeStarDays: stored.dailyThreeStarDays,
+    seasonBadges: stored.seasonBadges,
+    arena: stored.arena,
+  }
+}
+
+/** Phong độ, Bậc hiện tại và Bậc cao nhất từng đạt (hiển thị). */
+export function playerFormView(stored: Pick<StoredPlayer, "recentFormScores" | "tierRewardsClaimed">) {
+  const form = formFromRecent(stored.recentFormScores)
+  return {
+    form,
+    formGames: stored.recentFormScores.length,
+    tier: tierForForm(form),
+    highestTier: highestTier(stored.tierRewardsClaimed),
   }
 }
 

@@ -75,13 +75,50 @@ Plan: `plans/261027-1800-retention-acquisition-features-firebase/`
 - Thử thách ngày: 3 lượt/ngày (lấy cao nhất), mốc ★/★★/★★★ theo phong độ của chính người chơi (trung vị 7 ngày) + mốc phá kỷ lục, xu cộng ngay khi đạt; HUD hiện lượt + mốc kế tiếp.
 - Thử thách tuần thay sự kiện tuần: bảng tổng điểm 7 ngày (tab "Thử thách"), rương sao 10★/18★, thưởng hạng nhận thứ Hai. Bỏ chế độ Sự kiện tuần; Vô tận chỉ tính Hôm nay / Tuần / Mọi lúc.
 
+## v2.6 — Chiều sâu kỹ năng, Phase 01 học từ Minesweeper Online (2026-10-29)
+
+Plan: `plans/261029-2025-ap-dung-minesweeper-online-vao-block-blast/` (phase 01 xong, 02–04 chờ)
+
+- Chỉ số ván trong reducer (điểm/nước, xoá ≥3 dòng, ván thuần…) hiện ở hộp hết ván; thống kê người chơi + theo chế độ.
+- Phong độ (trung vị 20 ván) → Bậc kỹ năng có thưởng lần đầu; huy hiệu ở hồ sơ, BXH, hộp hết ván.
+- Lịch sử ván `/profile/games` (lọc chế độ, biểu đồ điểm), bộ đếm năm.
+- Nhiệm vụ 12 loại, mức theo Bậc, đổi 1 nhiệm vụ/ngày; 11 thành tích mới, nhóm theo chủ đề.
+- Cài đặt nâng khối, mù màu, giảm chuyển động, tắt tô dòng; chơi bằng bàn phím.
+- Cần làm ở host: TTL `games.expireAt`, deploy `firestore.indexes.json`.
+
+## v2.7 — Bằng chứng kỷ lục, BXH đa hạng mục, Không bế tắc, Phase 02 (2026-10-29)
+
+- Replay: kỷ lục / lọt top tự lưu, tự lưu thêm tối đa 20 ván; trang `/game/{id}` (phát/dừng, tua, ×1/×2/×4, phím ← →), hồ sơ công khai `/u/{tag}`, link từ BXH.
+- BXH 6 hạng mục: Điểm, Phong độ, Thuần, Combo, Sao, Không bế tắc.
+- Chống bot theo nhịp chơi + báo cáo replay; giữ thưởng hạng tuần khi bị báo cáo.
+- Chế độ "Không bế tắc" (khay luôn có lối đi), bảng riêng.
+- "Vì sao thua?" sau ván: nước quyết định + gợi ý; thống kê xui/sai ở hồ sơ.
+- Cần làm ở host: TTL `gameReplays.expireAt`, deploy `firestore.indexes.json`, cron `rebuild-leaderboards` (Vercel đã khai trong `vercel.json`, Docker trong `docker/daily-reminder-cron.sh`).
+- Ngay sau khi deploy: chạy `npx vite-node --config vitest.config.ts scripts/backfill-form-and-stars-leaderboards.ts` (chạy thử) rồi thêm `--write` để điền sẵn bảng Phong độ + Sao từ `gameSessions` cũ (≤ 30 ngày) và `levelStars`. Mỗi người chỉ gộp 1 lần (`formBackfilledAt`).
+
+## v2.8 — Mùa giải, Đấu trường, Bài học (Phase 03, 2026-10-30)
+
+- Mùa giải tháng: BXH mùa (Điểm / Phong độ / Thuần), 5 nhiệm vụ mùa, thưởng hạng + huy hiệu nhận ở mùa sau; trang `/season`, thẻ trang chủ, huy hiệu ở hồ sơ.
+- Đấu trường 5 loại × 5 cấp, trả xu mở lượt (chỗ tiêu xu chính), trang `/arena`, đồng hồ giờ server cho loại Tốc độ. Số liệu đo bằng bot: `reports/arena-balance.txt`.
+- 12 bài học kỹ thuật với lời giải mẫu, trang SEO `/how-to-play/{slug}`, link từ "Vì sao thua?".
+- Theo dõi kinh tế xu: `coinsSpentTotal` (xu đã kiếm = coins + đã tiêu).
+- Cần ở host: deploy `firestore.indexes.json`; theo dõi tỉ lệ xu tiêu / kiếm sau 4 tuần (mục tiêu ≥ 0.6).
+
+## v3.0 — Đối kháng & xã hội có kiểm soát (Phase 04, 2026-10-30)
+
+- Đấu xếp hạng với bóng ma (`/ranked`): MMR ẩn + LP + 7 giải, mùa quý, bot khi thiếu người, BXH LP.
+- Thách đấu có thưởng 2 chiều (3 ngày, +50 xu cả hai, chống tài khoản phụ).
+- Emote trong phòng 1v1; tổng kết năm `/recap/{year}` (15/12 → 15/01) + ảnh share.
+- Cần ở host: index `ghostPool` + rules emote — service `firebase-deploy` trong docker-compose tự deploy mỗi lần `up` (cấp quyền IAM một lần, xem `deployment-guide.md`).
+- Chưa làm: thưởng cuối quý theo giải, hàng chờ đấu realtime, push nhắc tổng kết năm.
+
 ## Còn mở
 
 - QA trên điện thoại thật (Android Chrome, iOS Safari), cả dọc và ngang.
 - Playtest để cân chỉnh điểm/độ khó (`engine/tray-generator-config.ts`, `engine/score-and-combo-rules.ts`), dùng `npm run balance` để so trước/sau. Đổi catalog khối → tăng `SAVE_VERSION`.
 - Chốt tên game + bộ nhận diện (env `NEXT_PUBLIC_SITE_NAME`).
 - Kiểm tra âm thanh trên iOS Safari (unlock audio đã gọi ở pointerdown/pointerup/keydown).
-- Chơi bằng bàn phím (WCAG 2.1.1) — hiện chỉ hỗ trợ chuột/cảm ứng.
+- Chỉnh ngưỡng Bậc + band nhiệm vụ theo phân phối điểm thật sau ~2 tuần (`player-form-rules.ts`, `daily-mission-catalog.ts`).
 - Nhỏ: "Kỷ lục mới" hiện cả khi bằng kỷ lục cũ; 2 tab cùng mở ghi đè save của nhau; canvas mờ khi kéo cửa sổ sang màn hình khác DPR.
 
 ## Follow-up (chưa lên kế hoạch)

@@ -3,6 +3,8 @@
  * người chơi (phải hơn chính mình hôm qua), sao tuần mở rương, thưởng hạng theo tổng điểm cả tuần.
  */
 
+import { median } from "./score-statistics"
+
 /** Số lượt tính điểm mỗi ngày (lấy lượt cao nhất); lượt sau đó là luyện tập. */
 export const DAILY_RUNS_PER_DAY = 3
 /** Phong độ của người chưa từng chơi thử thách. */
@@ -45,13 +47,6 @@ export interface DailyGoals {
 export interface DailyDayProgress {
   stars: number
   recordBroken: boolean
-}
-
-/** Trung vị (chẵn → trung bình 2 số giữa), làm tròn. */
-function median(values: readonly number[]): number {
-  const sorted = [...values].sort((a, b) => a - b)
-  const middle = Math.floor(sorted.length / 2)
-  return Math.round(sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2)
 }
 
 /** Phong độ từ điểm cao nhất các ngày đã chơi, ngày gần nhất trước. */

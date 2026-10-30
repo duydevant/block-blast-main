@@ -5,12 +5,29 @@ export enum Routes {
   PLAY_DAILY = "/play?daily=1",
   /** Nút Play chung: luôn vào ván Vô tận (ván Vô tận đang dở thì chơi tiếp). */
   PLAY_ENDLESS = "/play?endless=1",
+  /** Chế độ "Không bế tắc" (khay luôn có lối đi). */
+  PLAY_LOGIC = "/play?logic=1",
   LEADERBOARD = "/leaderboard",
   /** Trang thách đấu: `${Routes.CHALLENGE}/{id}`. */
   CHALLENGE = "/c",
   PROFILE = "/profile",
+  /** Lịch sử ván đã nộp của chính mình. */
+  PROFILE_GAMES = "/profile/games",
+  /** Xem lại ván: `${Routes.REPLAY}/{replayId}`. */
+  REPLAY = "/game",
+  /** Tổng kết năm: `${Routes.RECAP}/{year}` (mở 15/12 → 15/01). */
+  RECAP = "/recap",
+  /** Đấu xếp hạng với bóng ma: giải, LP, BXH LP. */
+  RANKED = "/ranked",
+  /** Đấu trường: chọn loại + cấp, lượt đang mở. */
+  ARENA = "/arena",
+  /** Mùa giải tháng: nhiệm vụ mùa, Bậc cao nhất, thưởng mùa trước. */
+  SEASON = "/season",
+  /** Hồ sơ công khai: `${Routes.PLAYER}/{tag}`. */
+  PLAYER = "/u",
   /** Giải thích + bảng của thử thách ngày. */
   DAILY = "/daily",
+  /** Cách chơi; bài học kỹ thuật ở `${Routes.HOW_TO_PLAY}/{slug}`. */
   HOW_TO_PLAY = "/how-to-play",
   LEVELS = "/levels",
   /** Phòng đấu: `${Routes.DUEL}/{id}`. */
@@ -21,6 +38,19 @@ export enum Routes {
 export enum ApiRoutes {
   GAMES_START = "/api/games/start",
   GAMES_SUBMIT = "/api/games/submit",
+  GAMES_HISTORY = "/api/games/history",
+  MISSIONS_REPLACE = "/api/missions/replace",
+  REPLAYS = "/api/replays",
+  REPORTS = "/api/reports",
+  RECAP = "/api/recap",
+  ARENA = "/api/arena",
+  RANKED_STATUS = "/api/ranked",
+  RANKED_MATCH = "/api/ranked/match",
+  ARENA_RUNS = "/api/arena/runs",
+  ARENA_ABANDON = "/api/arena/runs/abandon",
+  SEASONS = "/api/seasons",
+  SEASONS_CLAIM = "/api/seasons/claim",
+  LESSONS_COMPLETE = "/api/lessons/complete",
   PROFILE = "/api/profile",
   DAILY = "/api/daily",
   DAILY_CLAIM = "/api/daily/claim",

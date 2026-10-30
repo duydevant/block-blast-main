@@ -11,7 +11,7 @@ import { parseSavedGame } from "./saved-game-schema"
  * Mỗi chế độ giữ ván riêng: Vô tận, thử thách ngày, màn chơi, thách đấu bạn bè.
  * Đấu 1v1 không cất (ván có giờ, rời là bỏ trận).
  */
-export const GAME_MODE_SLOTS = ["endless", "daily", "level", "challenge"] as const
+export const GAME_MODE_SLOTS = ["endless", "daily", "level", "challenge", "logic"] as const
 export type GameModeSlot = (typeof GAME_MODE_SLOTS)[number]
 
 /** Ván dở của một chế độ khi người chơi sang chế độ khác (đủ để chơi tiếp và nộp điểm như chưa từng rời). */
@@ -28,7 +28,8 @@ export type ParkedGames = Partial<Record<GameModeSlot, ParkedGame>>
 
 /** Chế độ của ván (null = đấu 1v1, không cất). */
 export function modeSlotOf(state: Pick<ParkedGame, "dailyDay" | "challenge" | "variantRun">): GameModeSlot | null {
-  if (state.variantRun?.kind === "duel") return null
+  // Đấu 1v1 / Đấu trường có giờ hoặc lần thử đã trả xu → không cất (rời ván = nộp phần đã chơi).
+  if (state.variantRun?.kind === "duel" || state.variantRun?.kind === "arena" || state.variantRun?.kind === "ranked") return null
   if (state.variantRun) return state.variantRun.kind
   if (state.dailyDay) return "daily"
   if (state.challenge) return "challenge"

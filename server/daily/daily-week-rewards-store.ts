@@ -14,6 +14,7 @@ import {
 } from "@/modules/progression/daily-challenge-goals"
 import { getAdminFirestore } from "@/server/firebase/firebase-admin-app"
 import { HttpError } from "@/server/http/authenticated-json-route"
+import { hasOpenReports } from "@/server/reports/report-store"
 import { challengeWeekBoardId, isChallengeWeekOpen } from "@/server/leaderboards/leaderboard-board-ids"
 import { leaderboardRef } from "@/server/leaderboards/leaderboard-documents"
 import { LEADERBOARD_ENTRIES_SUBCOLLECTION, parseStoredPlayer, USERS_COLLECTION } from "@/server/profile/stored-player-document"
@@ -35,6 +36,9 @@ const weekDocSchema = z.object({
   rankClaimedAt: z.unknown().optional(),
   rank: z.number().int().positive().nullable().catch(null).optional(),
 })
+
+/** Thưởng hạng từ top này trở lên bị giữ khi người chơi có báo cáo gian lận chưa xử lý. */
+const REVIEWED_RANK_LIMIT = 10
 
 /** `rankClaimable`: bảng tuần đã chốt (hết giờ ân hạn nộp muộn) → nhận được thưởng hạng, hạng không đổi nữa. */
 export type PastWeekStatus = DailyWeekStatus & { rankCoins: number; rankClaimed: boolean; rankClaimable: boolean }
@@ -96,6 +100,8 @@ export async function claimDailyWeekReward(uid: string, request: ClaimDailyWeekR
     const total = (await entryRef(db, target.week, uid).get()).get("score")
     if (typeof total !== "number") throw new HttpError(409, "week-not-played")
     rank = await rankFor(db, target.week, total)
+    // Top có thưởng lớn + đang bị báo cáo gian lận → giữ thưởng tới khi admin xem replay xong.
+    if (rank <= REVIEWED_RANK_LIMIT && (await hasOpenReports(db, uid))) throw new HttpError(409, "under-review")
   }
 
   const userRef = db.collection(USERS_COLLECTION).doc(uid)

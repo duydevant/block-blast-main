@@ -64,9 +64,25 @@ firebase deploy --only firestore,database
 
 Rules hiện chặn mọi truy cập trực tiếp từ client — app đi qua API route dùng Admin SDK.
 
+### TTL (khai báo trong `firestore.indexes.json`)
+
+`fieldOverrides` bật TTL cho `expireAt` của `gameSessions`, `games`, `gameReplays` → `npx firebase-tools deploy --only firestore:indexes` là đủ, không cần bấm trên console. Cách bấm tay bên dưới chỉ dùng khi không deploy bằng CLI.
+
 ### TTL cho ván chưa nộp (tuỳ chọn, nên làm)
 
 Firestore → **TTL** (tab bên trái của Firestore Database) → **Create policy** → Collection group `gameSessions`, Timestamp field `expireAt` → Create. Session không nộp sẽ tự xoá sau 30 ngày (không tốn phí ghi).
+
+Làm thêm 1 policy cho lịch sử ván: Collection group `games` (users/{uid}/games), field `expireAt` → lịch sử tự xoá sau 180 ngày.
+
+Thêm policy thứ ba cho replay: Collection group `gameReplays`, field `expireAt` (doc `expireAt: null` — kỷ lục — không bị xoá).
+
+### Xử lý báo cáo gian lận
+
+Collection `reports` (status `open`). Mở `/game/{replayId}` để xem lại; xong đổi `status` thành `dismissed` hoặc `confirmed`. Xác nhận gian lận → đặt `users/{uid}.banned = true` (không vào bảng, không nhận xu). Báo cáo `open` gửi trong 8 ngày gần nhất giữ thưởng hạng tuần top 10 của người bị báo cáo. Chỉ người chơi có ≥ 20 ván mới báo cáo được (5 báo cáo/ngày).
+
+### Index lịch sử ván
+
+Lọc lịch sử theo chế độ (`/profile/games`) cần index ghép trong `firestore.indexes.json` (`games`: mode ASC, finishedAt DESC, __name__ DESC): `firebase deploy --only firestore:indexes`. Thiếu index thì lọc theo chế độ trả lỗi, tab "Tất cả" vẫn chạy.
 
 ## 8. Biến môi trường
 

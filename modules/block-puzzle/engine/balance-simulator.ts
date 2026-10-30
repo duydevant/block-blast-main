@@ -1,4 +1,5 @@
-import { BOARD_SIZE, type BoardCells, type GameState } from "./game-types"
+import { countIsolatedHoles } from "./board-heuristics"
+import type { GameState, GameVariant } from "./game-types"
 import { createNewGame, gameReducer } from "./game-state-reducer"
 import { findShape } from "./piece-shape-catalog"
 import { listPlacements, simulatePlacement } from "./tray-solvability-search"
@@ -7,19 +8,6 @@ import { listPlacements, simulatePlacement } from "./tray-solvability-search"
  * Bot tự chơi để đo cân bằng sau khi chỉnh `tray-generator-config.ts` / `score-and-combo-rules.ts`.
  * Bot tham lam, không phải người chơi giỏi nhất — chỉ dùng để so sánh trước/sau khi đổi số.
  */
-
-/** Ô trống bị bao kín 4 phía — càng nhiều càng khó đặt khối to. */
-function countIsolatedHoles(board: BoardCells): number {
-  let holes = 0
-  for (let row = 0; row < BOARD_SIZE; row++)
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      if (board[row * BOARD_SIZE + col]) continue
-      const blocked = [[row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]]
-        .every(([r, c]) => r < 0 || c < 0 || r >= BOARD_SIZE || c >= BOARD_SIZE || board[r * BOARD_SIZE + c] !== 0)
-      if (blocked) holes++
-    }
-  return holes
-}
 
 /** Nước tốt nhất theo heuristic: xoá nhiều dòng, ít lỗ kín, bàn trống nhiều. */
 export function chooseMove(game: GameState): { slot: number; row: number; col: number } | null {
@@ -51,11 +39,11 @@ export interface BalanceReport {
   cappedGames: number
 }
 
-export function simulateGames({ games = 200, seed = 1, maxMoves = 600 } = {}): BalanceReport {
+export function simulateGames({ games = 200, seed = 1, maxMoves = 600, variant }: { games?: number; seed?: number; maxMoves?: number; variant?: GameVariant } = {}): BalanceReport {
   const scores: number[] = []
   let moves = 0, clears = 0, combos = 0, boardClears = 0, cappedGames = 0
   for (let index = 0; index < games; index++) {
-    let game = createNewGame(seed + index * 7919)
+    let game = createNewGame(seed + index * 7919, variant)
     let gameMoves = 0
     while (!game.isGameOver && gameMoves < maxMoves) {
       const move = chooseMove(game)

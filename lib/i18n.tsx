@@ -8,9 +8,18 @@ import { leaderboardEn, leaderboardVi } from "@/modules/leaderboard/leaderboard-
 import { playerProfileEn, playerProfileVi } from "@/modules/player-profile/player-profile-translations"
 import { dailyChallengeEn, dailyChallengeVi } from "@/modules/progression/daily-challenge-translations"
 import { progressionEn, progressionVi } from "@/modules/progression/progression-translations"
+import { skillProgressionEn, skillProgressionVi } from "@/modules/progression/skill-progression-translations"
 import { pwaEn, pwaVi } from "@/modules/pwa/pwa-translations"
 import { howToPlayEn, howToPlayVi } from "@/modules/seo/how-to-play-translations"
 import { gameModesEn, gameModesVi } from "@/modules/game-modes/game-modes-translations"
+import { gameSettingsEn, gameSettingsVi } from "@/modules/block-puzzle/game-settings-translations"
+import { analysisEn, analysisVi } from "@/modules/analysis/analysis-translations"
+import { replayEn, replayVi } from "@/modules/replay/replay-translations"
+import { seasonArenaEn, seasonArenaVi } from "@/modules/season/season-arena-translations"
+import { rankedEn, rankedVi } from "@/modules/ranked/ranked-translations"
+import { lessonsEn, lessonsVi } from "@/modules/lessons/lessons-translations"
+import { duelEmoteEn, duelEmoteVi } from "@/modules/duel/duel-emote-translations"
+import { recapEn, recapVi } from "@/modules/recap/recap-translations"
 import { uiEn, uiVi } from "./ui-translations"
 
 import { type Locale, locales } from "./i18n-locales"
@@ -40,10 +49,19 @@ const en = {
   ...leaderboardEn,
   ...challengeEn,
   ...progressionEn,
+  ...skillProgressionEn,
   ...dailyChallengeEn,
   ...pwaEn,
   ...howToPlayEn,
   ...gameModesEn,
+  ...gameSettingsEn,
+  ...analysisEn,
+  ...replayEn,
+  ...seasonArenaEn,
+  ...rankedEn,
+  ...lessonsEn,
+  ...duelEmoteEn,
+  ...recapEn,
   ...uiEn,
 } as const
 
@@ -71,10 +89,19 @@ const vi: TranslationDictionary = {
   ...leaderboardVi,
   ...challengeVi,
   ...progressionVi,
+  ...skillProgressionVi,
   ...dailyChallengeVi,
   ...pwaVi,
   ...howToPlayVi,
   ...gameModesVi,
+  ...gameSettingsVi,
+  ...analysisVi,
+  ...replayVi,
+  ...seasonArenaVi,
+  ...rankedVi,
+  ...lessonsVi,
+  ...duelEmoteVi,
+  ...recapVi,
   ...uiVi,
 }
 

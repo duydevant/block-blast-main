@@ -23,7 +23,11 @@ export async function buyThemeWithCoins(uid: string, themeId: string): Promise<P
     const current = parseStoredPlayer((await tx.get(userRef)).data())
     if (current.unlockedThemes.includes(themeId)) throw new HttpError(409, "theme-owned")
     if (current.coins < unlock.price) throw new HttpError(409, "not-enough-coins")
-    const next = { coins: current.coins - unlock.price, unlockedThemes: [...current.unlockedThemes, themeId] }
+    const next = {
+      coins: current.coins - unlock.price,
+      coinsSpentTotal: current.coinsSpentTotal + unlock.price,
+      unlockedThemes: [...current.unlockedThemes, themeId],
+    }
     tx.set(userRef, { ...next, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
     return { ...current, ...next }
   })

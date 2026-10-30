@@ -53,3 +53,18 @@ Cập nhật bản mới: `git pull && docker compose up -d --build`.
 - Đứng sau reverse proxy: đặt `HOST_IP=127.0.0.1` và cho proxy trỏ `http://127.0.0.1:$HOST_PORT`. Proxy phải bật HTTPS, vì Web Push và đăng nhập Google cần HTTPS.
 - Firebase Auth → **Authorized domains**: thêm domain production (xem `firebase-setup-guide.md`).
 - Không deploy trên Vercel thì `vercel.json` (cron của Vercel) không có tác dụng; service `cron` thay cho nó.
+
+## Tự deploy index / TTL / rules Firebase
+
+Service `firebase-deploy` chạy một lần mỗi `docker compose up`, deploy `firestore.indexes.json` (index + TTL), `firestore.rules` và `database.rules.json` lên project `FIREBASE_ADMIN_PROJECT_ID` bằng `firebase-tools@15.33.0`. Không cần `firebase login`: nó dùng service account Firebase Admin trong file env. Chạy lại không đổi gì nếu file không đổi; index có trên console mà không có trong file sẽ **không** bị xoá. Lỗi deploy không chặn `web`. Xem log bằng `docker compose logs firebase-deploy`. Tắt bằng `FIREBASE_AUTO_DEPLOY=0`.
+
+Cấp quyền một lần: Google Cloud Console → IAM → service account trong `FIREBASE_ADMIN_CLIENT_EMAIL` (dạng `firebase-adminsdk-…@<project>.iam.gserviceaccount.com`) → thêm role:
+
+- **Cloud Datastore Index Admin** (index + TTL Firestore)
+- **Firebase Rules Admin** (rules Firestore)
+- **Firebase Realtime Database Admin** (rules RTDB)
+- **Service Usage Consumer** (firebase-tools kiểm tra API đã bật trước khi deploy)
+
+Lệnh tương đương: `gcloud projects add-iam-policy-binding <project> --member="serviceAccount:<email>" --role=<role>` với `roles/datastore.indexAdmin`, `roles/firebaserules.admin`, `roles/firebasedatabase.admin`, `roles/serviceusage.serviceUsageConsumer`. Chạy thử riêng service: `docker compose up firebase-deploy`.
+
+Thiếu quyền thì log báo `403` / `PERMISSION_DENIED`; app vẫn chạy, chỉ là index/rules chưa được cập nhật.

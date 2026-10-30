@@ -1,5 +1,5 @@
 import { useFirebaseAuthStore } from "@/lib/auth/firebase-auth-store"
-import { fetchJsonWithFirebaseIdToken } from "@/lib/firebase/fetch-json-with-firebase-id-token"
+import { ApiRequestError, fetchJsonWithFirebaseIdToken } from "@/lib/firebase/fetch-json-with-firebase-id-token"
 import { ApiRoutes } from "@/lib/routes"
 import { useBlockPuzzleGameStore } from "@/modules/block-puzzle/store/block-puzzle-game-store"
 import type { StartRankedGameResponse } from "@/modules/player-profile/player-profile-types"
@@ -37,6 +37,84 @@ export async function startLevelGame(levelId: number): Promise<"ranked" | "offli
   }
   useBlockPuzzleGameStore.getState().startVariantGame({ gameId: null, uid: null, seed: definition.seed, run })
   return "offline"
+}
+
+/** Chế độ "Không bế tắc": có mạng thì ván tính điểm (BXH riêng), không thì chơi offline với seed ngẫu nhiên. */
+export async function startLogicGame(): Promise<void> {
+  const run = { kind: "logic" as const }
+  const uid = signedInUid()
+  if (uid) {
+    try {
+      const issued = await requestStart(uid, { mode: "logic" })
+      if (issued.mode === "logic" && issued.gameId) {
+        useBlockPuzzleGameStore.getState().startVariantGame({ gameId: issued.gameId, uid, seed: issued.seed, run })
+        return
+      }
+    } catch (error) {
+      console.warn("[logic] online start failed, playing offline", error)
+    }
+  }
+  useBlockPuzzleGameStore.getState().startVariantGame({ gameId: null, uid: null, seed: Math.floor(Math.random() * 0x1_0000_0000), run })
+}
+
+/** Lần thử trước còn đang nộp (409 `attempt-pending`): đợi sync nộp xong rồi xin lại, tối đa chừng này lần. */
+const ARENA_PENDING_RETRIES = 8
+const ARENA_PENDING_DELAY_MS = 1500
+
+const isAttemptPending = (error: unknown) => error instanceof ApiRequestError && error.code === "attempt-pending"
+
+/**
+ * Một lần thử của lượt Đấu trường đã mở (server kiểm lượt còn mở + còn lần thử). Ván vừa chơi chưa nộp xong thì server
+ * từ chối để không chấm nhầm thành "bỏ dở" → đợi rồi thử lại.
+ */
+export async function startArenaAttempt(runId: string): Promise<void> {
+  const uid = signedInUid()
+  if (!uid) throw new Error("not-signed-in")
+  // Ván Đấu trường vừa hết (còn quyền hồi sinh nên chưa vào hàng chờ) → nộp ngay để server chấm trước lần thử mới.
+  const current = useBlockPuzzleGameStore.getState()
+  if (current.variantRun?.kind === "arena" && current.game?.isGameOver) current.queueFinishedRankedGame()
+  let issued: StartRankedGameResponse | null = null
+  for (let attempt = 0; issued === null; attempt++) {
+    try {
+      issued = await requestStart(uid, { mode: "arena", arenaRunId: runId })
+    } catch (error) {
+      if (!isAttemptPending(error) || attempt >= ARENA_PENDING_RETRIES) throw error
+      await new Promise((resolve) => setTimeout(resolve, ARENA_PENDING_DELAY_MS))
+    }
+  }
+  if (issued.mode !== "arena" || !issued.gameId || !issued.arena) throw new Error("unexpected-arena-start")
+  const { type, level, attempt, endsAt, serverNow } = issued.arena
+  useBlockPuzzleGameStore.getState().startVariantGame({
+    gameId: issued.gameId,
+    uid,
+    seed: issued.seed,
+    run: { kind: "arena", runId, type, level, attempt, endsAt, clockOffset: serverNow - Date.now() },
+  })
+}
+
+/** Trận xếp hạng với bóng ma; trận trước còn đang nộp (409 `match-pending`) → nộp ngay rồi đợi xin lại. */
+export async function startRankedMatch(): Promise<void> {
+  const uid = signedInUid()
+  if (!uid) throw new Error("not-signed-in")
+  const current = useBlockPuzzleGameStore.getState()
+  if (current.variantRun?.kind === "ranked" && current.game?.isGameOver) current.queueFinishedRankedGame()
+  let issued: StartRankedGameResponse | null = null
+  for (let attempt = 0; issued === null; attempt++) {
+    try {
+      issued = await fetchJsonWithFirebaseIdToken<StartRankedGameResponse>(ApiRoutes.RANKED_MATCH, { method: "POST", expectedUid: uid })
+    } catch (error) {
+      if (!(error instanceof ApiRequestError && error.code === "match-pending") || attempt >= ARENA_PENDING_RETRIES) throw error
+      await new Promise((resolve) => setTimeout(resolve, ARENA_PENDING_DELAY_MS))
+    }
+  }
+  if (issued.mode !== "ranked" || !issued.gameId || !issued.ranked) throw new Error("unexpected-ranked-start")
+  const { ghost, endsAt, serverNow } = issued.ranked
+  useBlockPuzzleGameStore.getState().startVariantGame({
+    gameId: issued.gameId,
+    uid,
+    seed: issued.seed,
+    run: { kind: "ranked", seed: issued.seed, ghost, endsAt, clockOffset: serverNow - Date.now() },
+  })
 }
 
 /** Ván đấu 1v1: chỉ khi trận đang diễn ra (server kiểm thành viên + giờ). */

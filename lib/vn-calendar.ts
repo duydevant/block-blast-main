@@ -64,3 +64,21 @@ export function isoWeekKeyFor(now: Date): string {
   const week = Math.ceil(((thursday.getTime() - yearStart) / DAY_MS + 1) / 7)
   return `${thursday.getUTCFullYear()}-W${String(week).padStart(2, "0")}`
 }
+
+/** "2026-11" — mùa giải = tháng lịch theo giờ VN. */
+export function seasonKeyFor(now: Date): string {
+  const date = localDate(now)
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`
+}
+
+/** Mốc bắt đầu / kết thúc (ms, 00:00 ngày 1 giờ VN) của mùa "YYYY-MM". */
+export function seasonBounds(season: string): { startMs: number; endMs: number } {
+  const year = Number(season.slice(0, 4))
+  const month = Number(season.slice(5, 7)) - 1
+  return { startMs: Date.UTC(year, month, 1) - DAILY_UTC_OFFSET_MS, endMs: Date.UTC(year, month + 1, 1) - DAILY_UTC_OFFSET_MS }
+}
+
+/** Mùa liền trước "YYYY-MM". */
+export function previousSeasonKey(season: string): string {
+  return seasonKeyFor(new Date(seasonBounds(season).startMs - 1))
+}

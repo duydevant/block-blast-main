@@ -21,6 +21,7 @@ export function gameRewardMessages(i18n: I18n, rewards: GameRewards): string[] {
   const { t } = i18n
   return [
     ...(rewards.levelUp !== null ? [t("reward.levelUp", { level: rewards.levelUp })] : []),
+    ...(rewards.tierUp ? [t("reward.tierUp", { tier: t(`tier.${rewards.tierUp}`) })] : []),
     ...rewards.missions.map((id) => t("reward.mission", { name: missionTitleFromId(i18n, id) })),
     ...rewards.achievements.map((id) => t("reward.achievement", { name: t(`achievement.${id}` as Parameters<I18n["t"]>[0]) })),
     ...(rewards.referralBonus ? [t("reward.referral")] : []),

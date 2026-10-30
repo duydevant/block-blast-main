@@ -1,6 +1,6 @@
 import { BOARD_SIZE, type BoardCells, type GameState } from "./game-types"
 import { hasAnyMove } from "./move-availability"
-import { dealTray } from "./piece-tray-generator"
+import { dealTrayForState } from "./deal-tray-for-state"
 
 export const POWER_UP_RULES = {
   /** Ô cất khối mở khi điểm đạt mốc này. Store giữ trạng thái đã mở cho các ván sau (reducer NEW_GAME thì không). */
@@ -24,7 +24,7 @@ export function stashPiece(state: GameState, slot: number): GameState {
   if (!piece) return state
   const tray = state.tray.map((item, index) => (index === slot ? null : item))
   const deal = tray.every((item) => item === null)
-    ? dealTray(state.board, state.score, state.rngState, state.nextPieceUid, state.generatorState, piece)
+    ? dealTrayForState(state, state.board, state.score, piece)
     : { tray, rngState: state.rngState, nextPieceUid: state.nextPieceUid, generatorState: state.generatorState }
   return { ...state, ...deal, stash: piece, stashUnlocked: true, lastMove: null, isGameOver: !hasAnyMove(state.board, deal.tray, piece) }
 }
@@ -33,7 +33,7 @@ export function stashPiece(state: GameState, slot: number): GameState {
 export function replaceTray(state: GameState): GameState {
   const charges = state.replaceCharges ?? POWER_UP_RULES.replaceChargesPerGame
   if (state.isGameOver || state.noPowerUps || charges <= 0) return state
-  const deal = dealTray(state.board, state.score, state.rngState, state.nextPieceUid, state.generatorState, state.stash)
+  const deal = dealTrayForState(state, state.board, state.score, state.stash)
   return { ...state, ...deal, replaceCharges: charges - 1, lastMove: null, isGameOver: !hasAnyMove(state.board, deal.tray, state.stash) }
 }
 
@@ -57,7 +57,7 @@ export function revive(state: GameState): GameState {
   const rows = new Set(fullestLines(state.board, POWER_UP_RULES.reviveRows, true))
   const cols = new Set(fullestLines(state.board, POWER_UP_RULES.reviveCols, false))
   const board = state.board.map((cell, index) => (rows.has(Math.floor(index / BOARD_SIZE)) || cols.has(index % BOARD_SIZE) ? 0 : cell))
-  const deal = dealTray(board, state.score, state.rngState, state.nextPieceUid, state.generatorState, state.stash)
+  const deal = dealTrayForState(state, board, state.score, state.stash)
   return { ...state, ...deal, board, reviveUsed: true, combo: 0, movesSinceClear: 0, lastMove: null,
     isGameOver: !hasAnyMove(board, deal.tray, state.stash) }
 }

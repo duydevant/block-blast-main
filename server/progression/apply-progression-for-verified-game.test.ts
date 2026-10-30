@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { EMPTY_RUN_STATS } from "@/modules/block-puzzle/engine/game-run-stats"
 import type { ReplaySummary } from "@/modules/block-puzzle/engine/replay-recorded-game-actions"
 import { EMPTY_DAILY_STREAK, EMPTY_PLAYER_STATS } from "@/modules/player-profile/player-profile-types"
 import { dailyMissionsForDay } from "@/modules/progression/daily-mission-catalog"
@@ -19,6 +20,7 @@ const summary = (overrides: Partial<ReplaySummary> = {}): ReplaySummary => ({
   boardClears: 0,
   isGameOver: true,
   stashUnlocked: false,
+  runStats: { ...EMPTY_RUN_STATS, stashUses: 1 },
   ...overrides,
 })
 
@@ -34,6 +36,13 @@ function input(overrides: Partial<ProgressionInput> = {}): ProgressionInput {
     missionDay: DAY,
     missionProgress: {},
     inviter: null,
+    mode: "classic",
+    missionBand: 0,
+    missionReplacedSlot: null,
+    tierAfter: "unranked",
+    dailyStars: 0,
+    todayGames1000: 0,
+    dailyThreeStarDays: 0,
     ...overrides,
   }
 }
@@ -53,14 +62,24 @@ describe("applyProgressionForVerifiedGame", () => {
     const missions = dailyMissionsForDay(DAY)
     const almostDone = Object.fromEntries(missions.map((item) => [item.id, item.target - 1]))
     const stored = parseStoredPlayer({ xp: 90, achievements: ["first-game"], stats: { ...EMPTY_PLAYER_STATS, gamesPlayed: 5 } })
-    const big = summary({ score: 5000, linesCleared: 60, bestCombo: 16, boardClears: 2 })
-    const result = applyProgressionForVerifiedGame(input({ stored, summary: big, countedDaily: true, missionProgress: almostDone }))
+    // Ván đủ điều kiện mọi loại nhiệm vụ (nhiệm vụ của ngày chọn ngẫu nhiên trong 12 loại).
+    const big = summary({
+      score: 5000,
+      moveCount: 40,
+      linesCleared: 60,
+      bestCombo: 16,
+      boardClears: 2,
+      runStats: { ...EMPTY_RUN_STATS, multiClears: [5, 5, 0] },
+    })
+    const result = applyProgressionForVerifiedGame(
+      input({ stored, summary: big, countedDaily: true, missionProgress: almostDone, mode: "duel", level: { id: 1, stars: 3 }, dailyStars: 3 })
+    )
 
     expect(result.rewards.missions.sort()).toEqual(missions.map((item) => item.id).sort())
     const missionXp = missions.reduce((sum, item) => sum + item.xp, 0)
     expect(result.rewards.xp).toBe(60 + missionXp)
     expect(result.rewards.levelUp).not.toBeNull()
-    expect(result.rewards.achievements).toEqual(["score-5000", "combo-15"])
+    expect(result.rewards.achievements).toEqual(["score-5000", "combo-15", "pure-2000"])
   })
 
   it("does not repay a mission that was already complete", () => {
@@ -119,7 +138,9 @@ describe("applyProgressionForVerifiedGame", () => {
 
   it("pays coins only for newly earned level stars", () => {
     const stored = parseStoredPlayer({ achievements: ["first-game"], levelStars: { "3": 1 } })
-    const better = applyProgressionForVerifiedGame(input({ stored, level: { id: 3, stars: 3 } }))
+    // Nhiệm vụ hôm nay đã xong hết → xu chỉ đến từ sao màn.
+    const missionProgress = Object.fromEntries(dailyMissionsForDay(DAY).map((item) => [item.id, item.target]))
+    const better = applyProgressionForVerifiedGame(input({ stored, missionProgress, level: { id: 3, stars: 3 } }))
     expect(better.rewards.level).toEqual({ id: 3, stars: 3, improved: true })
     expect(better.playerFields.levelStars).toEqual({ "3": 3 })
     expect(better.rewards.coins).toBe(2 * COINS_PER_LEVEL_STAR)
@@ -128,5 +149,40 @@ describe("applyProgressionForVerifiedGame", () => {
     expect(worse.rewards.level?.improved).toBe(false)
     expect(worse.rewards.coins).toBe(0)
     expect(worse.playerFields.levelStars).toEqual({ "3": 1 })
+  })
+})
+
+describe("tier rewards", () => {
+  it("pays every newly reached tier once and reports the highest", () => {
+    const stored = parseStoredPlayer({ achievements: ["first-game"], tierRewardsClaimed: ["bronze"] })
+    const missionProgress = Object.fromEntries(dailyMissionsForDay(DAY).map((item) => [item.id, item.target]))
+    const result = applyProgressionForVerifiedGame(input({ stored, missionProgress, tierAfter: "gold" }))
+    expect(result.rewards.tierUp).toBe("gold")
+    expect(result.playerFields.tierRewardsClaimed).toEqual(["bronze", "silver", "gold"])
+    // 50 (Bạc) + 100 (Vàng) + thành tích "tier-gold" 100.
+    expect(result.rewards.coins).toBe(250)
+    expect(result.rewards.achievements).toEqual(["tier-gold"])
+
+    const again = applyProgressionForVerifiedGame(input({ stored: { ...stored, tierRewardsClaimed: result.playerFields.tierRewardsClaimed }, missionProgress, tierAfter: "silver" }))
+    expect(again.rewards.tierUp).toBeNull()
+  })
+})
+
+describe("flagged games", () => {
+  it("only keep base XP: no missions, achievements, tiers, level stars or referral progress", () => {
+    const missions = dailyMissionsForDay(DAY)
+    const almostDone = Object.fromEntries(missions.map((item) => [item.id, item.target - 1]))
+    const stored = parseStoredPlayer({ referredBy: "inviter", referralGames: 2 })
+    const result = applyProgressionForVerifiedGame(
+      input({ stored, missionProgress: almostDone, tierAfter: "gold", level: { id: 1, stars: 3 }, flagged: true })
+    )
+    expect(result.rewards.missions).toEqual([])
+    expect(result.missionProgress).toEqual(almostDone)
+    expect(result.rewards.achievements).toEqual([])
+    expect(result.rewards.tierUp).toBeNull()
+    expect(result.rewards.level).toBeNull()
+    expect(result.rewards.referralBonus).toBe(false)
+    expect(result.playerFields.referralGames).toBe(2)
+    expect(result.rewards.xp).toBe(15)
   })
 })
