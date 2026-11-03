@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
-import { Baloo_2 } from "next/font/google"
+// Baloo 2 tự host qua npm (Fontsource): build không cần gọi Google Fonts.
+import "@fontsource-variable/baloo-2"
 import localFont from "next/font/local"
 
 import { JsonLd } from "@/components/seo/json-ld"
@@ -15,14 +16,6 @@ const inter = localFont({
   display: "swap",
 })
 
-/** Font tròn cho tiêu đề, số điểm và nút (Google Fonts, tải lúc build và tự host). */
-const baloo = Baloo_2({
-  subsets: ["latin", "vietnamese"],
-  weight: ["600", "700", "800"],
-  variable: "--font-baloo",
-  display: "swap",
-})
-
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
@@ -34,7 +27,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${baloo.variable} dark h-full antialiased`} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} dark h-full antialiased`} suppressHydrationWarning>
       <body className="relative flex min-h-full flex-col bg-background">
         <AppProviders>
           <JsonLd data={[websiteJsonLd(), organizationJsonLd()]} />
