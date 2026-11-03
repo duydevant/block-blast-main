@@ -114,6 +114,15 @@ function isLocale(value: string | null | undefined): value is Locale {
 }
 
 function preferredLocale(): Locale {
+  // Portal nhúng game truyền ?lang=vi|en: ưu tiên nhất và lưu lại cho lần sau.
+  const fromQuery = new URLSearchParams(window.location.search).get("lang")?.toLowerCase()
+  if (isLocale(fromQuery)) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, fromQuery)
+    } catch {}
+    return fromQuery
+  }
+
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY)
     if (isLocale(saved)) return saved
@@ -139,6 +148,22 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const timer = window.setTimeout(() => setLocaleState(preferredLocale()), 0)
     return () => window.clearTimeout(timer)
+  }, [])
+
+  // Đổi ngôn ngữ trên portal khi game đang mở: portal gửi { type: "ant-play:locale", locale } xuống iframe.
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (window.parent === window || event.source !== window.parent) return
+      const data = event.data as { type?: unknown; locale?: unknown } | null
+      if (data?.type !== "ant-play:locale" || typeof data.locale !== "string" || !isLocale(data.locale)) return
+      const next = data.locale
+      setLocaleState(next)
+      try {
+        window.localStorage.setItem(STORAGE_KEY, next)
+      } catch {}
+    }
+    window.addEventListener("message", onMessage)
+    return () => window.removeEventListener("message", onMessage)
   }, [])
 
   useEffect(() => {
