@@ -21,12 +21,15 @@ const nextConfig: NextConfig = {
 
   // ─── Security & SEO HTTP Headers ─────────────────────────────────────────
   async headers() {
+    // Cho phép nhúng iframe vào web game (ANT Play). Đặt EMBED_FRAME_ANCESTORS lúc build để giới hạn domain,
+    // ví dụ: "'self' https://play.antfootage.net". Mặc định "*" = mọi website đều nhúng được.
+    const frameAncestors = process.env.EMBED_FRAME_ANCESTORS?.trim() || "*"
     return [
       {
         source: "/(.*)",
         headers: [
-          // Prevent clickjacking
-          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          // Ai được nhúng game qua iframe (thay cho X-Frame-Options: SAMEORIGIN vốn chặn mọi iframe khác domain)
+          { key: "Content-Security-Policy", value: `frame-ancestors ${frameAncestors}` },
           // Prevent MIME sniffing
           { key: "X-Content-Type-Options", value: "nosniff" },
           // Controls how much referrer info is sent → privacy + SEO signal
