@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} dark h-full antialiased`} suppressHydrationWarning>
+    <html lang="vi" className={`${inter.variable} dark h-full antialiased`} suppressHydrationWarning>
       <body className="relative flex min-h-full flex-col bg-background">
         <AppProviders>
           <JsonLd data={[websiteJsonLd(), organizationJsonLd()]} />

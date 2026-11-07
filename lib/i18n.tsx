@@ -27,6 +27,7 @@ import { type Locale, locales } from "./i18n-locales"
 export { locales, type Locale }
 
 const STORAGE_KEY = "base-game.locale"
+const DEFAULT_LOCALE: Locale = "vi"
 
 const en = {
   "language.label": "Language",
@@ -128,8 +129,8 @@ function preferredLocale(): Locale {
     if (isLocale(saved)) return saved
   } catch {}
 
-  const browserLocale = window.navigator.language.toLowerCase().split("-")[0]
-  return isLocale(browserLocale) ? browserLocale : "en"
+  // Mặc định tiếng Việt, không lấy theo ngôn ngữ trình duyệt.
+  return DEFAULT_LOCALE
 }
 
 interface I18nContextValue {
@@ -143,7 +144,7 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null)
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("en")
+  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE)
 
   useEffect(() => {
     const timer = window.setTimeout(() => setLocaleState(preferredLocale()), 0)
